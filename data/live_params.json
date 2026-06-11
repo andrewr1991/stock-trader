@@ -1,0 +1,14 @@
+[
+  {
+    "lookback_days": 252,
+    "top_n": 15
+  },
+  {
+    "lookback_days": 126,
+    "top_n": 15
+  },
+  {
+    "lookback_days": 126,
+    "top_n": 10
+  }
+]

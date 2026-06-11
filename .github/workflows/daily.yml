@@ -1,3 +1,4 @@
+# Daily paper-trading loop. Runs in GitHub's cloud — no local computer needed.
 name: daily-trading-loop
 
 on:

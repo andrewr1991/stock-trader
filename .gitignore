@@ -3,5 +3,7 @@
 __pycache__/
 *.pyc
 data/cache/
-reports/
+reports/*
+!reports/performance.md
+!reports/performance.png
 *.egg-info/

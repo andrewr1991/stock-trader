@@ -32,6 +32,11 @@ copy .env.example .env   # then paste your Alpaca PAPER keys into .env
 .venv\Scripts\python scripts\run_daily.py             # the real (paper) thing
 ```
 
+## Scoreboard
+
+The latest **[performance report](reports/performance.md)** (robot vs SPY
+since inception) is regenerated and committed by every daily run.
+
 ## Live loop behavior
 
 `run_daily.py` marks equity to the SQLite journal (`data/journal.db`) and
@@ -90,8 +95,9 @@ enough independent samples; real-time adaptation learns noise). Instead:
 - [x] Live paper-trading loop (`scripts/run_daily.py`)
 - [x] Trade/decision journal (SQLite, `data/journal.db`)
 - [x] T-bill yield on idle cash (BIL)
-- [ ] Schedule the daily run via Windows Task Scheduler
-- [ ] Daily evaluation report vs SPY (equity, Sharpe, drawdown)
-- [ ] Champion/challenger promotion
+- [x] Cloud automation via GitHub Actions (daily loop, no local machine needed)
+- [x] Daily evaluation report vs SPY (`reports/performance.md`)
+- [x] Monthly learning refresh + champion/challenger promotion gate
+      (`scripts/run_monthly_refresh.py`, runs the 1st of each month)
 - [ ] Point-in-time universe (survivorship fix)
 - [ ] Second strategy family (mean reversion) for diversification

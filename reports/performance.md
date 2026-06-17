@@ -1,12 +1,12 @@
 # Robot vs SPY (paper account)
 
-_Last updated: 2026-06-16 22:00 UTC · live for 6 days · equity $102,102_
+_Last updated: 2026-06-17 21:29 UTC · live for 7 days · equity $101,796_
 
 | Metric | Robot | SPY |
 |---|---|---|
-| Total return | +1.98% | +4.05% |
-| Excess vs SPY | -2.08% | — |
-| Max drawdown | -1.68% | — |
+| Total return | +1.67% | +3.43% |
+| Excess vs SPY | -1.76% | — |
+| Max drawdown | -1.97% | — |
 | Sharpe | _needs 30+ days_ | — |
 
 ![Robot vs SPY](performance.png)

@@ -6,4 +6,9 @@ data/cache/
 reports/*
 !reports/performance.md
 !reports/performance.png
+!reports/performance_challenger.md
+!reports/performance_challenger.png
+!reports/champion_vs_challenger.csv
+!reports/champion_vs_challenger.html
+!reports/champion_vs_challenger.png
 *.egg-info/

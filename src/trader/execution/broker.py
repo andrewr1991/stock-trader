@@ -20,14 +20,20 @@ from trader.config import ALPACA_API_KEY, ALPACA_PAPER, ALPACA_SECRET_KEY
 
 
 class AlpacaBroker:
-    def __init__(self):
-        if not ALPACA_API_KEY or not ALPACA_SECRET_KEY:
+    def __init__(self, api_key: str | None = None, secret_key: str | None = None,
+                 paper: bool | None = None):
+        """Credentials default to the champion's (.env globals); the challenger
+        bot passes its own. Passing nothing reproduces the original behavior."""
+        api_key = api_key if api_key is not None else ALPACA_API_KEY
+        secret_key = secret_key if secret_key is not None else ALPACA_SECRET_KEY
+        paper = ALPACA_PAPER if paper is None else paper
+        if not api_key or not secret_key:
             raise RuntimeError(
                 "Alpaca keys missing. Copy .env.example to .env and fill in "
                 "your paper trading API keys."
             )
-        self.client = TradingClient(ALPACA_API_KEY, ALPACA_SECRET_KEY, paper=ALPACA_PAPER)
-        self.paper = ALPACA_PAPER
+        self.client = TradingClient(api_key, secret_key, paper=paper)
+        self.paper = paper
 
     def account(self):
         return self.client.get_account()

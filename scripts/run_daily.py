@@ -1,9 +1,10 @@
 """Daily live paper-trading loop. Schedule this once per trading day.
 
 Usage:
-    python scripts/run_daily.py                # normal daily run
-    python scripts/run_daily.py --dry-run      # show intended orders, trade nothing
-    python scripts/run_daily.py --force        # rebalance even if not month-end
+    python scripts/run_daily.py                      # champion, normal run
+    python scripts/run_daily.py --bot challenger     # the challenger bot
+    python scripts/run_daily.py --dry-run            # show orders, trade nothing
+    python scripts/run_daily.py --force              # rebalance even if not month-end
 """
 from __future__ import annotations
 
@@ -17,13 +18,15 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--bot", default="champion", choices=["champion", "challenger"])
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
+    from trader.bots import get_bot
     from trader.live.runner import run_daily
 
-    run_daily(dry_run=args.dry_run, force_rebalance=args.force)
+    run_daily(get_bot(args.bot), dry_run=args.dry_run, force_rebalance=args.force)
 
 
 if __name__ == "__main__":

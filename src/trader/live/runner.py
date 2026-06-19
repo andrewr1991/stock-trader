@@ -1,30 +1,31 @@
-"""The daily live loop.
+"""The daily live loop, shared by every bot.
 
 Run once per trading day (ideally ~15:30-15:45 ET, so signals use
 near-final prices and orders fill before the close; orders placed after
 hours queue for the next open, which is also fine).
 
-Every run:    mark equity to the journal, check the kill switch.
-Month-end:    recompute target weights with the live parameter ensemble,
-              apply risk limits, and trade the difference.
+Every run:    mark equity to the bot's journal, check the kill switch.
+Month-end:    recompute target weights with the bot's strategy, apply the
+              shared risk limits, and trade the difference.
 
-Decisions mirror the backtest exactly: same strategy code, same monthly
-cadence, same risk layer. The only difference is who executes the trades.
+The only things that differ between bots are the strategy, the Alpaca
+credentials, and the file paths — all carried by the BotConfig. Decisions
+mirror the backtest exactly: same strategy code, same monthly cadence, same
+risk layer. The only difference is who executes the trades.
 """
 from __future__ import annotations
 
 import datetime as dt
-import json
 
 import pandas as pd
 
+from trader.bots import BotConfig, champion_bot
 from trader.config import (
     BENCHMARK,
     CASH_ETF,
     GROSS_EXPOSURE_CAP,
     INITIAL_CAPITAL,
     KILL_SWITCH_DRAWDOWN,
-    LIVE_PARAMS_FILE,
     MAX_ORDERS_PER_RUN,
     MAX_POSITION_WEIGHT,
     UNIVERSE,
@@ -32,29 +33,16 @@ from trader.config import (
 from trader.data.loader import load_prices
 from trader.live.journal import Journal
 from trader.risk.manager import RiskManager
-from trader.strategies.ensemble import EnsembleStrategy
-from trader.strategies.momentum import MomentumStrategy
 
 MIN_TRADE_NOTIONAL = 25.0  # ignore dust-sized rebalance deltas
 
-DEFAULT_LIVE_PARAMS = [{"lookback_days": 126, "top_n": 5}]
 
-
-def load_live_strategy() -> EnsembleStrategy:
-    if LIVE_PARAMS_FILE.exists():
-        params_list = json.loads(LIVE_PARAMS_FILE.read_text())
-    else:
-        params_list = DEFAULT_LIVE_PARAMS
-    return EnsembleStrategy([MomentumStrategy(**p) for p in params_list])
-
-
-def compute_target_weights() -> pd.Series:
-    """Latest rebalance row from the live strategy, freshly downloaded data."""
+def compute_target_weights(bot: BotConfig) -> pd.Series:
+    """Latest rebalance row from the bot's strategy, freshly downloaded data."""
     tickers = sorted(set(UNIVERSE) | {BENCHMARK, CASH_ETF})
     start = (pd.Timestamp.today() - pd.DateOffset(years=3)).strftime("%Y-%m-%d")
     prices = load_prices(tickers, start=start, refresh=True)
-    strategy = load_live_strategy()
-    weights = strategy.generate_weights(prices).iloc[-1]
+    weights = bot.strategy().generate_weights(prices).iloc[-1]
     return weights[weights > 0.0001]
 
 
@@ -68,19 +56,29 @@ def is_month_end_session(broker) -> bool:
     return bool(len(bdays)) and pd.Timestamp(today) == bdays[-1]
 
 
-def run_daily(dry_run: bool = False, force_rebalance: bool = False) -> None:
-    journal = Journal()
+def run_daily(bot: BotConfig | None = None, dry_run: bool = False,
+              force_rebalance: bool = False) -> None:
+    bot = bot or champion_bot()
+    tag = f"[{bot.name}]"
+    journal = Journal(bot.journal_db)
     today = dt.date.today().isoformat()
 
     broker = None
-    try:
-        from trader.execution.broker import AlpacaBroker
+    if bot.has_credentials():
+        try:
+            from trader.execution.broker import AlpacaBroker
 
-        broker = AlpacaBroker()
-    except Exception as exc:
-        if not dry_run:
-            raise
-        print(f"(dry run without broker: {exc})")
+            broker = AlpacaBroker(api_key=bot.api_key, secret_key=bot.secret_key,
+                                  paper=bot.paper)
+        except Exception as exc:
+            if not dry_run:
+                raise
+            print(f"{tag} (dry run without broker: {exc})")
+    elif not dry_run:
+        # No keys configured (e.g. challenger before a second Alpaca account
+        # is set up). No-op cleanly instead of failing the scheduled run.
+        print(f"{tag} no Alpaca credentials configured; skipping live run.")
+        return
 
     if broker is not None:
         equity = broker.equity()
@@ -92,7 +90,7 @@ def run_daily(dry_run: bool = False, force_rebalance: bool = False) -> None:
     peak = max(journal.peak_equity() or equity, equity)
     drawdown = equity / peak - 1.0
     journal.log_equity(today, equity, drawdown)
-    print(f"Equity ${equity:,.2f} | peak ${peak:,.2f} | drawdown {drawdown:.1%}")
+    print(f"{tag} Equity ${equity:,.2f} | peak ${peak:,.2f} | drawdown {drawdown:.1%}")
 
     risk = RiskManager(
         max_position_weight=MAX_POSITION_WEIGHT,
@@ -102,25 +100,25 @@ def run_daily(dry_run: bool = False, force_rebalance: bool = False) -> None:
 
     if drawdown <= -KILL_SWITCH_DRAWDOWN:
         journal.log_event("KILL_SWITCH", f"drawdown {drawdown:.1%}; liquidating everything")
-        print(f"KILL SWITCH: drawdown {drawdown:.1%} breaches -{KILL_SWITCH_DRAWDOWN:.0%}. Liquidating.")
+        print(f"{tag} KILL SWITCH: drawdown {drawdown:.1%} breaches -{KILL_SWITCH_DRAWDOWN:.0%}. Liquidating.")
         if broker is not None and not dry_run:
             broker.cancel_all_orders()
             broker.close_all_positions()
         return
 
     if not (force_rebalance or is_month_end_session(broker)):
-        print("Not a rebalance day (month-end). Equity logged; nothing to trade.")
+        print(f"{tag} Not a rebalance day (month-end). Equity logged; nothing to trade.")
         return
 
     # Guard: never rebalance twice in one day (e.g. the script run twice by
     # accident, or a scheduler retry) — that would double-buy.
     if journal.last_event_date("REBALANCE") == today and not dry_run:
         journal.log_event("SKIP", "rebalance already executed today")
-        print("Rebalance already executed today; refusing to trade again.")
+        print(f"{tag} Rebalance already executed today; refusing to trade again.")
         return
 
-    print("Rebalance day. Computing targets ...")
-    weights = compute_target_weights()
+    print(f"{tag} Rebalance day. Computing targets ...")
+    weights = compute_target_weights(bot)
     weights = risk.apply(weights, drawdown)
     targets = {sym: float(w) * equity for sym, w in weights.items()}
     journal.log_targets(today, {s: float(w) for s, w in weights.items()}, targets)
@@ -137,14 +135,14 @@ def run_daily(dry_run: bool = False, force_rebalance: bool = False) -> None:
     # strategy is a few dozen orders at most; more means a bug somewhere.
     if len(deltas) > MAX_ORDERS_PER_RUN:
         journal.log_event("ABORT", f"{len(deltas)} orders requested > {MAX_ORDERS_PER_RUN} cap")
-        print(f"ABORT: {len(deltas)} orders requested (cap {MAX_ORDERS_PER_RUN}). Nothing traded.")
+        print(f"{tag} ABORT: {len(deltas)} orders requested (cap {MAX_ORDERS_PER_RUN}). Nothing traded.")
         return
 
     # Guard: total buys can never exceed total equity (sanity backstop).
     total_buys = sum(d for _, d in buys)
     if total_buys > equity:
         journal.log_event("ABORT", f"buys ${total_buys:,.0f} exceed equity ${equity:,.0f}")
-        print("ABORT: buy total exceeds account equity. Nothing traded.")
+        print(f"{tag} ABORT: buy total exceeds account equity. Nothing traded.")
         return
 
     # Guard: spend only what we actually have — current cash plus sale
@@ -160,17 +158,17 @@ def run_daily(dry_run: bool = False, force_rebalance: bool = False) -> None:
             "BUY_THROTTLE",
             f"buys ${total_buys:,.0f} > budget ${budget:,.0f}; scaled by {scale:.3f}",
         )
-        print(f"Buys throttled to budget ${budget:,.0f} (no margin, ever).")
+        print(f"{tag} Buys throttled to budget ${budget:,.0f} (no margin, ever).")
 
-    print(f"Targets: { {s: f'{w:.1%}' for s, w in weights.items()} }")
-    print(f"Orders: {len(sells)} sells, {len(buys)} buys")
+    print(f"{tag} Targets: { {s: f'{w:.1%}' for s, w in weights.items()} }")
+    print(f"{tag} Orders: {len(sells)} sells, {len(buys)} buys")
 
     for sym, delta in sells + buys:  # sells first to free cash
         side = "sell" if delta < 0 else "buy"
         full_exit = side == "sell" and targets.get(sym, 0.0) == 0.0
         label = "close" if full_exit else side
         if dry_run:
-            print(f"  [dry run] {label:>5} {sym:<6} ${abs(delta):>12,.2f}")
+            print(f"{tag}   [dry run] {label:>5} {sym:<6} ${abs(delta):>12,.2f}")
             journal.log_order(sym, label, abs(delta), "dry_run")
             continue
         try:
@@ -179,10 +177,10 @@ def run_daily(dry_run: bool = False, force_rebalance: bool = False) -> None:
             else:
                 order = broker.submit_notional_order(sym, abs(delta), side)
             journal.log_order(sym, label, abs(delta), "submitted", str(getattr(order, "id", "")))
-            print(f"  {label:>5} {sym:<6} ${abs(delta):>12,.2f}  submitted")
+            print(f"{tag}   {label:>5} {sym:<6} ${abs(delta):>12,.2f}  submitted")
         except Exception as exc:
             journal.log_order(sym, label, abs(delta), "error", detail=str(exc))
-            print(f"  {label:>5} {sym:<6} ${abs(delta):>12,.2f}  ERROR: {exc}")
+            print(f"{tag}   {label:>5} {sym:<6} ${abs(delta):>12,.2f}  ERROR: {exc}")
 
     journal.log_event("REBALANCE", f"{len(sells)} sells, {len(buys)} buys, equity ${equity:,.0f}")
-    print("Done. All decisions journaled.")
+    print(f"{tag} Done. All decisions journaled.")

@@ -23,9 +23,28 @@ BENCHMARK = "SPY"
 # of 0%. (Data begins May 2007; before that, backtest cash earns nothing.)
 CASH_ETF = "BIL"
 
-# Live trading state
+# Live trading state (CHAMPION bot — the original, unchanged)
 LIVE_PARAMS_FILE = PROJECT_ROOT / "data" / "live_params.json"
 JOURNAL_DB = PROJECT_ROOT / "data" / "journal.db"
+
+# --- CHALLENGER bot ---------------------------------------------------------
+# A second, independent paper-trading bot that runs the multi-sleeve
+# ChallengerStrategy. It shares ALL infrastructure with the champion but keeps
+# its own Alpaca account, journal, params, and reports. Create a SECOND Alpaca
+# paper account for it and put its keys here (or as GitHub secrets). Until
+# these are set, the challenger live loop simply no-ops — backtests and
+# walk-forward still run without keys.
+CHALLENGER_ALPACA_KEY = os.getenv("CHALLENGER_ALPACA_KEY", "")
+CHALLENGER_ALPACA_SECRET = os.getenv("CHALLENGER_ALPACA_SECRET", "")
+CHALLENGER_JOURNAL_DB = PROJECT_ROOT / "data" / "journal_challenger.db"
+CHALLENGER_PARAMS_FILE = PROJECT_ROOT / "data" / "live_params_challenger.json"
+
+# Challenger strategy knobs (all overridable per-instance; these are the
+# central defaults). Kept deliberately few — every added free parameter is a
+# new chance to overfit (see brain-ablation-findings).
+CHALLENGER_VOL_TARGET = 0.12        # annualized portfolio volatility target
+CHALLENGER_MOMENTUM_WEIGHT = 0.60   # sleeve blend: momentum
+CHALLENGER_MR_WEIGHT = 0.40         # sleeve blend: mean reversion
 
 # Risk limits enforced by the live loop (see trader/risk/manager.py).
 # Position cap: top_n=5 equal weight means ~20% per name in normal operation,

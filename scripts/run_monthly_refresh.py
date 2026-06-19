@@ -1,16 +1,22 @@
 """Monthly learning refresh with a champion/challenger promotion gate.
 
-1. Re-run the walk-forward on the freshest data; the latest fold's top-3
-   parameter ensemble is the CHALLENGER.
-2. The ensemble currently in data/live_params.json is the CHAMPION (it's
-   what the robot trades).
-3. The challenger is promoted only if it differs from the champion AND its
-   simulated after-cost Sharpe over the trailing 12 months beats the
-   champion's. Ties and losses keep the incumbent — switching has costs,
-   so the burden of proof is on the newcomer.
+This is the PARAMETER-level gate that runs inside EACH bot independently
+(distinct from the bot-level Champion-vs-Challenger A/B test between the two
+live accounts). For the selected bot:
 
-Every decision (promoted or retained, with the numbers) is logged to the
-journal, building the idea-loop's honest record.
+1. Re-run the walk-forward on the freshest data; the latest fold's top-k
+   parameter ensemble is the CANDIDATE.
+2. The ensemble currently in the bot's params file is the INCUMBENT.
+3. The candidate is promoted only if it differs from the incumbent AND its
+   simulated after-cost Sharpe over the trailing 12 months beats it. Ties and
+   losses keep the incumbent — switching has costs, so the burden of proof is
+   on the newcomer.
+
+Every decision is logged to the bot's journal.
+
+Usage:
+    python scripts/run_monthly_refresh.py                   # champion
+    python scripts/run_monthly_refresh.py --bot challenger
 """
 from __future__ import annotations
 
@@ -19,6 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+import argparse
 import json
 
 import pandas as pd
@@ -26,76 +33,66 @@ import pandas as pd
 from trader.backtest.engine import run_backtest
 from trader.backtest.metrics import sharpe
 from trader.backtest.walkforward import walk_forward
-from trader.config import (
-    BENCHMARK,
-    CASH_ETF,
-    COST_BPS,
-    INITIAL_CAPITAL,
-    LIVE_PARAMS_FILE,
-    UNIVERSE,
-)
+from trader.bots import BotConfig, get_bot
+from trader.config import BENCHMARK, CASH_ETF, COST_BPS, INITIAL_CAPITAL, UNIVERSE
 from trader.data.loader import load_prices
 from trader.live.journal import Journal
-from trader.live.runner import DEFAULT_LIVE_PARAMS
-from trader.strategies.ensemble import EnsembleStrategy
-from trader.strategies.momentum import MomentumStrategy
 
-PARAM_GRID = {"lookback_days": [126, 189, 252], "top_n": [5, 10, 15]}
 TRAILING_DAYS = 252
 
 
-def trailing_sharpe(prices: pd.DataFrame, params_list: list[dict]) -> float:
-    ensemble = EnsembleStrategy([MomentumStrategy(**p) for p in params_list])
-    weights = ensemble.generate_weights(prices)
+def trailing_sharpe(prices: pd.DataFrame, params_list: list[dict], bot: BotConfig) -> float:
+    weights = bot.build_strategy(params_list).generate_weights(prices)
     result = run_backtest(prices, weights, cost_bps=COST_BPS, initial_capital=INITIAL_CAPITAL)
     return sharpe(result.returns.iloc[-TRAILING_DAYS:])
 
 
 def main():
-    journal = Journal()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--bot", default="champion", choices=["champion", "challenger"])
+    args = parser.parse_args()
+
+    bot = get_bot(args.bot)
+    journal = Journal(bot.journal_db)
     tickers = sorted(set(UNIVERSE) | {BENCHMARK, CASH_ETF})
-    print("Downloading fresh prices ...")
+    print(f"[{bot.name}] Downloading fresh prices ...")
     prices = load_prices(tickers, start="2000-01-01", refresh=True)
 
-    print("Running walk-forward to produce the challenger ...")
+    print(f"[{bot.name}] Running walk-forward to produce the candidate ...")
     wf = walk_forward(
-        prices, MomentumStrategy, PARAM_GRID,
+        prices, bot.factory, bot.param_grid,
         train_years=5, test_years=1,
-        cost_bps=COST_BPS, initial_capital=INITIAL_CAPITAL, ensemble_k=3,
+        cost_bps=COST_BPS, initial_capital=INITIAL_CAPITAL, ensemble_k=bot.ensemble_k,
     )
-    challenger = wf.folds[-1].top_params
-
-    champion = (
-        json.loads(LIVE_PARAMS_FILE.read_text())
-        if LIVE_PARAMS_FILE.exists() else DEFAULT_LIVE_PARAMS
-    )
+    candidate = wf.folds[-1].top_params
+    incumbent = bot.load_params()
 
     def canon(p):
         return json.dumps(sorted(p, key=json.dumps), sort_keys=True)
 
-    if canon(challenger) == canon(champion):
-        journal.log_event("REFRESH", "challenger identical to champion; no change")
-        print("Challenger identical to champion. Nothing to do.")
+    if canon(candidate) == canon(incumbent):
+        journal.log_event("REFRESH", "candidate identical to incumbent; no change")
+        print(f"[{bot.name}] Candidate identical to incumbent. Nothing to do.")
         return
 
-    print("Challenger differs; comparing trailing 12-month Sharpe ...")
-    s_champion = trailing_sharpe(prices, champion)
-    s_challenger = trailing_sharpe(prices, challenger)
+    print(f"[{bot.name}] Candidate differs; comparing trailing 12-month Sharpe ...")
+    s_incumbent = trailing_sharpe(prices, incumbent, bot)
+    s_candidate = trailing_sharpe(prices, candidate, bot)
     detail = (
-        f"champion {champion} sharpe={s_champion:.2f} vs "
-        f"challenger {challenger} sharpe={s_challenger:.2f}"
+        f"incumbent {incumbent} sharpe={s_incumbent:.2f} vs "
+        f"candidate {candidate} sharpe={s_candidate:.2f}"
     )
-    print(f"  champion   {s_champion:.2f}  {champion}")
-    print(f"  challenger {s_challenger:.2f}  {challenger}")
+    print(f"  incumbent {s_incumbent:.2f}  {incumbent}")
+    print(f"  candidate {s_candidate:.2f}  {candidate}")
 
-    if pd.notna(s_challenger) and s_challenger > s_champion:
-        LIVE_PARAMS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        LIVE_PARAMS_FILE.write_text(json.dumps(challenger, indent=2))
+    if pd.notna(s_candidate) and s_candidate > s_incumbent:
+        bot.params_file.parent.mkdir(parents=True, exist_ok=True)
+        bot.params_file.write_text(json.dumps(candidate, indent=2))
         journal.log_event("PROMOTION", detail)
-        print("PROMOTED: challenger becomes the new champion.")
+        print(f"[{bot.name}] PROMOTED: candidate becomes the new live ensemble.")
     else:
         journal.log_event("RETAINED", detail)
-        print("RETAINED: champion keeps its seat; challenger wasn't better.")
+        print(f"[{bot.name}] RETAINED: incumbent keeps its seat; candidate wasn't better.")
 
 
 if __name__ == "__main__":

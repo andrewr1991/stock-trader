@@ -27,9 +27,38 @@ def sharpe(returns: pd.Series, rf_annual: float = 0.0) -> float:
     return float(excess.mean() / vol * np.sqrt(TRADING_DAYS))
 
 
+def sortino(returns: pd.Series, rf_annual: float = 0.0) -> float:
+    """Like Sharpe, but penalizes only downside volatility."""
+    excess = returns - rf_annual / TRADING_DAYS
+    downside = excess[excess < 0]
+    dd = downside.std()
+    if dd == 0 or np.isnan(dd):
+        return float("nan")
+    return float(excess.mean() / dd * np.sqrt(TRADING_DAYS))
+
+
 def max_drawdown(equity: pd.Series) -> float:
     running_max = equity.cummax()
     return float((equity / running_max - 1.0).min())
+
+
+def win_rate(equity: pd.Series, freq: str = "ME") -> float:
+    """Fraction of periods (default monthly) with a positive return."""
+    periodic = equity.resample(freq).last().pct_change().dropna()
+    if periodic.empty:
+        return float("nan")
+    return float((periodic > 0).mean())
+
+
+def annual_turnover(turnover: pd.Series | None) -> float:
+    """One-way traded fraction per year, from the engine's per-rebalance series."""
+    if turnover is None:
+        return float("nan")
+    nonzero = turnover[turnover > 0]
+    if nonzero.empty:
+        return 0.0
+    years = (turnover.index[-1] - turnover.index[0]).days / 365.25
+    return float(nonzero.sum() / years) if years > 0 else float("nan")
 
 
 def beta_alpha(returns: pd.Series, bench_returns: pd.Series) -> tuple[float, float]:

@@ -1,0 +1,10 @@
+[
+  {
+    "momentum_lookback_days": 126,
+    "mr_lookback_days": 5
+  },
+  {
+    "momentum_lookback_days": 126,
+    "mr_lookback_days": 10
+  }
+]

@@ -117,3 +117,9 @@ class MomentumStrategy(Strategy):
                 weights.loc[date, held] = 1.0 / len(held)
 
         return weights
+
+
+# The current production strategy IS momentum. `ChampionStrategy` is provided
+# as the canonical name for "what the champion bot trades" (per the
+# Champion/Challenger framework); it is exactly MomentumStrategy.
+ChampionStrategy = MomentumStrategy

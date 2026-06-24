@@ -36,4 +36,5 @@ jobs:
           git config user.email "trading-bot@users.noreply.github.com"
           git add data/live_params.json data/journal.db
           git diff --cached --quiet || git commit -m "learning refresh: $(date -u +%Y-%m-%d)"
+          git pull --rebase origin master
           git push

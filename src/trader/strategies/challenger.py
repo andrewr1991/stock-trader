@@ -16,6 +16,13 @@ Construction, in order:
 Same `generate_weights(prices) -> DataFrame` interface as every other
 strategy, so it reuses the engine, walk-forward, risk layer, and live runner
 without modification.
+
+v2 ablation (scripts/run_challenger_ablation.py, walk-forward 2005-2026):
+both a longer covariance lookback (60/90 vs 20) and a market-breadth regime
+input were tested and REJECTED — each cut out-of-sample CAGR/Sharpe with no
+drawdown benefit. The shorter 20-day cov window adapts to vol spikes faster.
+Both remain available behind flags (vol_window, regime_use_breadth) but stay
+OFF/short by default. Revisit if the universe expands to hundreds of names.
 """
 from __future__ import annotations
 
@@ -62,6 +69,9 @@ class ChallengerStrategy(Strategy):
         regime_extreme_vol: float = 0.35,
         neutral_exposure: float = 0.5,
         risk_off_exposure: float = 0.0,
+        regime_use_breadth: bool = False,
+        regime_breadth_low: float = 0.35,
+        regime_breadth_high: float = 0.55,
         benchmark: str = BENCHMARK,
         cash_ticker: str = CASH_ETF,
     ):
@@ -87,6 +97,8 @@ class ChallengerStrategy(Strategy):
             vol_window=regime_vol_window, high_vol=regime_high_vol,
             extreme_vol=regime_extreme_vol, neutral_exposure=neutral_exposure,
             risk_off_exposure=risk_off_exposure,
+            use_breadth=regime_use_breadth, breadth_low=regime_breadth_low,
+            breadth_high=regime_breadth_high, cash_ticker=cash_ticker,
         )
 
     def params(self) -> dict:
@@ -97,6 +109,7 @@ class ChallengerStrategy(Strategy):
             "mr_weight": self.mr_weight,
             "vol_target": self.vol_target,
             "vol_window": self.vol_window,
+            "use_breadth": self.regime.use_breadth,
         }
 
     def _exante_vol(self, daily_ret: pd.DataFrame, weights: pd.Series,

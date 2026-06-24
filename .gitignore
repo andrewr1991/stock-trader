@@ -11,4 +11,6 @@ reports/*
 !reports/champion_vs_challenger.csv
 !reports/champion_vs_challenger.html
 !reports/champion_vs_challenger.png
+!reports/challenger_diagnostics.md
+!reports/challenger_diagnostics.png
 *.egg-info/

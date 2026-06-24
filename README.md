@@ -98,6 +98,24 @@ Two distinct "champion/challenger" mechanisms exist, don't confuse them:
 5. **Same safeguards** — position caps, gross-exposure cap, kill switch,
    order throttle, no-margin budget all apply unchanged (shared risk layer).
 
+## Tests & diagnostics
+
+```powershell
+.venv\Scripts\python -m pytest tests -q             # unit suite (incl. no-look-ahead checks)
+.venv\Scripts\python scripts\run_challenger_ablation.py     # vol-lookback x breadth, out-of-sample
+.venv\Scripts\python scripts\run_challenger_diagnostics.py  # rolling Sharpe/vol, exposure, sleeve attribution
+```
+
+The test suite runs in CI ([tests.yml](.github/workflows/tests.yml)) on every
+push. The most important test asserts **causality** (no look-ahead): weights
+dated D are identical whether or not future prices exist.
+
+A v2 review (suggested externally) proposed a longer covariance lookback and a
+market-breadth regime input. Both were implemented behind flags and **rejected
+by the walk-forward ablation** — each cut out-of-sample return with no drawdown
+benefit (see [challenger.py](src/trader/strategies/challenger.py)). The
+capability stays, the defaults don't change. Evidence over plausibility, again.
+
 ## Architecture
 
 | Layer | Where | Job |
@@ -152,5 +170,8 @@ enough independent samples; real-time adaptation learns noise). Instead:
       (`scripts/run_monthly_refresh.py`, runs the 1st of each month)
 - [x] Second strategy family (mean reversion) + Challenger bot
 - [x] Champion vs Challenger framework (two bots, shared infra, comparison report)
-- [ ] Point-in-time universe (survivorship fix)
-- [ ] Second Alpaca paper account for the challenger (user step — see deployment guide)
+- [x] Challenger live on its own paper account
+- [x] Unit test suite + CI (`tests/`, `tests.yml`), incl. no-look-ahead checks
+- [x] Challenger diagnostics (rolling Sharpe/vol, exposure, sleeve attribution)
+- [ ] Point-in-time universe (survivorship fix — biggest remaining honesty upgrade)
+- [ ] Weekly mean-reversion cadence (decouple from monthly momentum)

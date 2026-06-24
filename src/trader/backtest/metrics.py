@@ -61,6 +61,18 @@ def annual_turnover(turnover: pd.Series | None) -> float:
     return float(nonzero.sum() / years) if years > 0 else float("nan")
 
 
+def rolling_sharpe(returns: pd.Series, window: int = TRADING_DAYS) -> pd.Series:
+    """Annualized Sharpe over a trailing window (default 1 year)."""
+    mean = returns.rolling(window).mean()
+    std = returns.rolling(window).std()
+    return (mean / std * np.sqrt(TRADING_DAYS)).replace([np.inf, -np.inf], np.nan)
+
+
+def rolling_vol(returns: pd.Series, window: int = TRADING_DAYS) -> pd.Series:
+    """Annualized realized volatility over a trailing window."""
+    return returns.rolling(window).std() * np.sqrt(TRADING_DAYS)
+
+
 def beta_alpha(returns: pd.Series, bench_returns: pd.Series) -> tuple[float, float]:
     """OLS beta and annualized alpha vs. the benchmark."""
     df = pd.concat([returns, bench_returns], axis=1, join="inner").dropna()

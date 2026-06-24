@@ -11,6 +11,7 @@ import pytest
 from trader.strategies.challenger import ChallengerStrategy
 from trader.strategies.mean_reversion import MeanReversionStrategy
 from trader.strategies.momentum import MomentumStrategy
+from trader.strategies.trend_multi_asset import MultiAssetTrendStrategy
 
 
 def _assert_causal(strategy, prices, cutoff_pos=700):
@@ -47,3 +48,9 @@ def test_challenger_causal_with_breadth(synthetic_prices):
 
 def test_challenger_causal_weekly_mr(synthetic_prices):
     _assert_causal(ChallengerStrategy(mr_rebalance="W"), synthetic_prices)
+
+
+def test_multi_asset_trend_causal(synthetic_prices):
+    # Use names that exist in the synthetic fixture as the "asset classes".
+    strat = MultiAssetTrendStrategy(assets=("AAA", "BBB", "CCC", "DDD"))
+    _assert_causal(strat, synthetic_prices)

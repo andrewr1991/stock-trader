@@ -5,7 +5,9 @@ import pandas as pd
 from trader.backtest.metrics import (
     annual_vol,
     cagr,
+    conditional_beta,
     max_drawdown,
+    rolling_beta,
     rolling_sharpe,
     sharpe,
     sortino,
@@ -58,3 +60,18 @@ def test_rolling_sharpe_length_matches():
     assert len(rs) == len(rets)
     assert rs.iloc[:251].isna().all()  # not enough history early
     assert rs.iloc[252:].notna().any()
+
+
+def test_rolling_beta_of_market_on_itself_is_one():
+    rng = np.random.default_rng(2)
+    mkt = pd.Series(rng.normal(0, 0.01, 600))
+    rb = rolling_beta(mkt, mkt, window=252).dropna()
+    assert np.allclose(rb, 1.0, atol=1e-6)
+
+
+def test_conditional_beta_recovers_slope():
+    rng = np.random.default_rng(3)
+    mkt = pd.Series(rng.normal(0, 0.01, 4000))
+    r = 0.5 * mkt + pd.Series(rng.normal(0, 0.001, 4000))  # beta ~0.5
+    assert abs(conditional_beta(r, mkt, side="down") - 0.5) < 0.1
+    assert abs(conditional_beta(r, mkt, side="up") - 0.5) < 0.1

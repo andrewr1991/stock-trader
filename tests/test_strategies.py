@@ -69,3 +69,24 @@ def test_weekly_mr_rebalances_more_and_no_leverage(synthetic_prices):
 def test_challenger_weekly_no_leverage(synthetic_prices):
     w = ChallengerStrategy(mr_rebalance="W").generate_weights(synthetic_prices)
     assert (w.sum(axis=1) <= 1.0 + 1e-6).all()
+
+
+def test_multi_asset_no_leverage(synthetic_prices):
+    from trader.strategies.trend_multi_asset import MultiAssetTrendStrategy
+    w = MultiAssetTrendStrategy(assets=("AAA", "BBB", "CCC", "DDD")).generate_weights(synthetic_prices)
+    assert (w.sum(axis=1) <= 1.0 + 1e-6).all()
+    assert (w.to_numpy() >= -1e-9).all()
+
+
+def test_multi_asset_all_cash_when_no_trend():
+    from trader.strategies.trend_multi_asset import MultiAssetTrendStrategy
+    # Every asset in a steady downtrend -> nothing above trend -> all cash.
+    idx = pd.bdate_range("2018-01-01", periods=400)
+    falling = pd.DataFrame({
+        "AAA": np.linspace(200, 100, 400),
+        "BBB": np.linspace(200, 100, 400),
+        CASH_ETF: np.linspace(100, 104, 400),
+    }, index=idx)
+    w = MultiAssetTrendStrategy(assets=("AAA", "BBB")).generate_weights(falling)
+    tail = w.iloc[-5:]
+    assert np.allclose(tail[CASH_ETF], 1.0)  # fully defensive

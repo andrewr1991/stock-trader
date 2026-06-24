@@ -110,6 +110,22 @@ The test suite runs in CI ([tests.yml](.github/workflows/tests.yml)) on every
 push. The most important test asserts **causality** (no look-ahead): weights
 dated D are identical whether or not future prices exist.
 
+More diagnostics:
+
+```powershell
+.venv\Scripts\python scripts\run_beta_stability.py        # rolling/down-market/per-fold beta
+.venv\Scripts\python scripts\run_multiasset_prototype.py  # multi-asset trend sleeve (design B)
+```
+
+[Beta stability](reports/challenger_beta_stability.md): the challenger's
+down-market beta (0.18) is *below* its static beta (0.29) — the low-beta
+property is real in declines — but per-fold OOS beta is unstable (0 to ~1.4),
+so it's not a constant hedge. [Multi-asset prototype](reports/multiasset_prototype.md):
+an independent per-asset trend sleeve (SPY/EFA/TLT/GLD + cash) that made
+**+8.7% in 2008** while SPY fell 37%; OOS 9.1% CAGR / Sharpe 0.97 / −13% maxDD,
+0.48 monthly correlation to the equity challenger — a genuine diversifier
+(prototype, not yet a live bot).
+
 Several reviewed ideas were implemented behind flags and **rejected by the
 walk-forward ablation** — each cut out-of-sample return with no offsetting
 benefit (see [challenger.py](src/trader/strategies/challenger.py)):
@@ -195,4 +211,7 @@ enough independent samples; real-time adaptation learns noise). Instead:
 - [x] Challenger diagnostics (rolling Sharpe/vol, exposure, sleeve attribution)
 - [x] Point-in-time universe framework (`universe.py`) — pluggable, needs delisted-price data to complete
 - [x] Weekly mean-reversion cadence (built, ablation-tested, rejected — monthly kept)
+- [x] Beta-stability reporting (rolling/down-market/per-fold beta)
+- [x] Multi-asset trend sleeve prototype (design B — crisis-resilient diversifier)
+- [ ] Promote the multi-asset sleeve to a third live bot (if you want it)
 - [ ] Delisted-name price data (paid feed) to finish the survivorship fix

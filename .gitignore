@@ -13,4 +13,8 @@ reports/*
 !reports/champion_vs_challenger.png
 !reports/challenger_diagnostics.md
 !reports/challenger_diagnostics.png
+!reports/challenger_beta_stability.md
+!reports/challenger_beta_stability.png
+!reports/multiasset_prototype.md
+!reports/multiasset_prototype.png
 *.egg-info/

@@ -85,6 +85,31 @@ def beta_alpha(returns: pd.Series, bench_returns: pd.Series) -> tuple[float, flo
     return beta, float(alpha_daily * TRADING_DAYS)
 
 
+def rolling_beta(returns: pd.Series, bench_returns: pd.Series,
+                 window: int = TRADING_DAYS) -> pd.Series:
+    """Trailing-window beta of returns to the benchmark."""
+    df = pd.concat([returns, bench_returns], axis=1, join="inner").dropna()
+    r, b = df.iloc[:, 0], df.iloc[:, 1]
+    cov = r.rolling(window).cov(b)
+    var = b.rolling(window).var()
+    return (cov / var).replace([np.inf, -np.inf], np.nan)
+
+
+def conditional_beta(returns: pd.Series, bench_returns: pd.Series,
+                     side: str = "down", threshold: float = 0.0) -> float:
+    """Beta computed only on days the benchmark is down (or up).
+
+    Downside beta is the decision-relevant number for a 'diversifier': a low
+    average beta is illusory if it spikes on the days the market falls.
+    """
+    df = pd.concat([returns, bench_returns], axis=1, join="inner").dropna()
+    r, b = df.iloc[:, 0], df.iloc[:, 1]
+    mask = b < threshold if side == "down" else b > threshold
+    r2, b2 = r[mask], b[mask]
+    var = b2.var()
+    return float(r2.cov(b2) / var) if var > 0 else float("nan")
+
+
 def summary(equity: pd.Series, bench_equity: pd.Series | None = None) -> dict:
     returns = equity.pct_change().fillna(0.0)
     out = {

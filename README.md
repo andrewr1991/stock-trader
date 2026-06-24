@@ -110,11 +110,31 @@ The test suite runs in CI ([tests.yml](.github/workflows/tests.yml)) on every
 push. The most important test asserts **causality** (no look-ahead): weights
 dated D are identical whether or not future prices exist.
 
-A v2 review (suggested externally) proposed a longer covariance lookback and a
-market-breadth regime input. Both were implemented behind flags and **rejected
-by the walk-forward ablation** — each cut out-of-sample return with no drawdown
-benefit (see [challenger.py](src/trader/strategies/challenger.py)). The
-capability stays, the defaults don't change. Evidence over plausibility, again.
+Several reviewed ideas were implemented behind flags and **rejected by the
+walk-forward ablation** — each cut out-of-sample return with no offsetting
+benefit (see [challenger.py](src/trader/strategies/challenger.py)):
+
+| Idea | Flag | Verdict |
+|---|---|---|
+| Longer covariance lookback (60/90) | `vol_window` | rejected — 20 adapts faster |
+| Market breadth in regime | `regime_use_breadth` | rejected — ~0.4%/yr drag |
+| Weekly mean-reversion cadence | `mr_rebalance="W"` | rejected — 2x turnover ate the signal |
+
+The capability stays, the defaults don't change. Evidence over plausibility.
+
+## Universe / survivorship
+
+`config.UNIVERSE` is today's survivors, so backtests are optimistic.
+[`universe.py`](src/trader/universe.py) is the plug-in point for fixing that:
+a `Universe` provides the tradable set *as of a date*. `StaticUniverse`
+(default) reproduces current behavior; `PointInTimeUniverse.from_csv` loads
+dated index membership (`ticker,start,end`); `apply_universe(prices, u)` masks
+the price panel by date so no strategy code changes.
+
+Honest limit: a full survivorship fix also needs **price history for delisted
+names**, which the free yfinance feed lacks. Point a paid feed at both the
+membership CSV and the loader to complete it — the framework is ready, the
+data is the missing piece.
 
 ## Architecture
 
@@ -173,5 +193,6 @@ enough independent samples; real-time adaptation learns noise). Instead:
 - [x] Challenger live on its own paper account
 - [x] Unit test suite + CI (`tests/`, `tests.yml`), incl. no-look-ahead checks
 - [x] Challenger diagnostics (rolling Sharpe/vol, exposure, sleeve attribution)
-- [ ] Point-in-time universe (survivorship fix — biggest remaining honesty upgrade)
-- [ ] Weekly mean-reversion cadence (decouple from monthly momentum)
+- [x] Point-in-time universe framework (`universe.py`) — pluggable, needs delisted-price data to complete
+- [x] Weekly mean-reversion cadence (built, ablation-tested, rejected — monthly kept)
+- [ ] Delisted-name price data (paid feed) to finish the survivorship fix

@@ -3,7 +3,9 @@ import numpy as np
 import pandas as pd
 
 from trader.config import BENCHMARK, CASH_ETF
+from trader.strategies.base import month_end_dates, week_end_dates
 from trader.strategies.challenger import ChallengerStrategy
+from trader.strategies.mean_reversion import MeanReversionStrategy
 from trader.strategies.momentum import MomentumStrategy
 from trader.strategies.regime import RISK_OFF, RISK_ON, RegimeModel
 
@@ -50,3 +52,20 @@ def test_regime_breadth_fraction_bounds(synthetic_prices):
 def test_regime_exposure_in_unit_interval(synthetic_prices):
     exp = RegimeModel().exposure(synthetic_prices)
     assert ((exp >= 0) & (exp <= 1)).all()
+
+
+def test_week_end_dates_more_frequent_than_month(synthetic_prices):
+    idx = synthetic_prices.index
+    assert len(week_end_dates(idx)) > 3 * len(month_end_dates(idx))
+
+
+def test_weekly_mr_rebalances_more_and_no_leverage(synthetic_prices):
+    monthly = MeanReversionStrategy(rebalance="M").generate_weights(synthetic_prices)
+    weekly = MeanReversionStrategy(rebalance="W").generate_weights(synthetic_prices)
+    assert len(weekly) > 3 * len(monthly)
+    assert (weekly.sum(axis=1) <= 1.0 + 1e-9).all()
+
+
+def test_challenger_weekly_no_leverage(synthetic_prices):
+    w = ChallengerStrategy(mr_rebalance="W").generate_weights(synthetic_prices)
+    assert (w.sum(axis=1) <= 1.0 + 1e-6).all()

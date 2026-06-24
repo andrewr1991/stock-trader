@@ -23,6 +23,11 @@ input were tested and REJECTED — each cut out-of-sample CAGR/Sharpe with no
 drawdown benefit. The shorter 20-day cov window adapts to vol spikes faster.
 Both remain available behind flags (vol_window, regime_use_breadth) but stay
 OFF/short by default. Revisit if the universe expands to hundreds of names.
+
+A weekly mean-reversion cadence (mr_rebalance='W') was also tested
+(run_mr_cadence_ablation.py) and REJECTED: it cut OOS CAGR 11.7% -> 8.6% and
+Sharpe 0.99 -> 0.80 as ~2x turnover ate the short-horizon signal. Monthly
+stays the default; the weekly path remains behind the flag.
 """
 from __future__ import annotations
 
@@ -58,6 +63,7 @@ class ChallengerStrategy(Strategy):
         mr_top_n: int = 10,
         momentum_weight: float = CHALLENGER_MOMENTUM_WEIGHT,
         mr_weight: float = CHALLENGER_MR_WEIGHT,
+        mr_rebalance: str = "M",  # 'M' monthly (default) or 'W' weekly
         # --- volatility targeting ---
         vol_target: float = CHALLENGER_VOL_TARGET,
         vol_window: int = 20,
@@ -90,7 +96,7 @@ class ChallengerStrategy(Strategy):
         )
         self.mean_reversion = MeanReversionStrategy(
             lookback_days=mr_lookback_days, top_n=mr_top_n,
-            use_trend_filter=False, cash_ticker=cash_ticker,
+            use_trend_filter=False, rebalance=mr_rebalance, cash_ticker=cash_ticker,
         )
         self.regime = RegimeModel(
             trend_ticker=benchmark, trend_ma_days=trend_ma_days,
@@ -110,6 +116,7 @@ class ChallengerStrategy(Strategy):
             "vol_target": self.vol_target,
             "vol_window": self.vol_window,
             "use_breadth": self.regime.use_breadth,
+            "mr_rebalance": self.mean_reversion.rebalance,
         }
 
     def _exante_vol(self, daily_ret: pd.DataFrame, weights: pd.Series,
@@ -134,10 +141,16 @@ class ChallengerStrategy(Strategy):
         mom_w = self.momentum.generate_weights(prices)
         mr_w = self.mean_reversion.generate_weights(prices)
 
+        # Sleeves may rebalance on different cadences (e.g. monthly momentum,
+        # weekly mean reversion). Combine on the union of their rebalance
+        # dates, holding each sleeve's last target between its own rebalances
+        # (ffill). When both are monthly the indices match and this reduces to
+        # a plain blend on the shared monthly grid.
         cols = sorted(set(mom_w.columns) | set(mr_w.columns))
-        mom_w = mom_w.reindex(columns=cols, fill_value=0.0)
-        mr_w = mr_w.reindex(index=mom_w.index, columns=cols, fill_value=0.0)
-        blended = self.momentum_weight * mom_w + self.mr_weight * mr_w
+        unified = mom_w.index.union(mr_w.index)
+        mom_a = mom_w.reindex(columns=cols, fill_value=0.0).reindex(unified).ffill().fillna(0.0)
+        mr_a = mr_w.reindex(columns=cols, fill_value=0.0).reindex(unified).ffill().fillna(0.0)
+        blended = self.momentum_weight * mom_a + self.mr_weight * mr_a
 
         exposure = self.regime.exposure(prices)
         risk_cols = [c for c in cols if c != self.cash_ticker]

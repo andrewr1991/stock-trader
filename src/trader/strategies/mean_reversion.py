@@ -16,7 +16,7 @@ from __future__ import annotations
 import pandas as pd
 
 from trader.config import BENCHMARK, CASH_ETF
-from trader.strategies.base import Strategy, month_end_dates
+from trader.strategies.base import Strategy, rebalance_dates
 
 
 class MeanReversionStrategy(Strategy):
@@ -32,6 +32,7 @@ class MeanReversionStrategy(Strategy):
         trend_ma_days: int = 200,
         use_trend_filter: bool = True,
         hold_buffer: float = 2.0,
+        rebalance: str = "M",
         cash_ticker: str = CASH_ETF,
     ):
         self.lookback_days = lookback_days
@@ -42,6 +43,7 @@ class MeanReversionStrategy(Strategy):
         self.trend_ma_days = trend_ma_days
         self.use_trend_filter = use_trend_filter
         self.hold_buffer = hold_buffer
+        self.rebalance = rebalance
         self.cash_ticker = cash_ticker
 
     def params(self) -> dict:
@@ -52,6 +54,7 @@ class MeanReversionStrategy(Strategy):
             "quality_ma_days": self.quality_ma_days,
             "use_trend_filter": self.use_trend_filter,
             "hold_buffer": self.hold_buffer,
+            "rebalance": self.rebalance,
         }
 
     def generate_weights(self, prices: pd.DataFrame) -> pd.DataFrame:
@@ -75,13 +78,13 @@ class MeanReversionStrategy(Strategy):
         else:
             risk_on = pd.Series(True, index=prices.index)
 
-        rebalance_dates = month_end_dates(prices.index)
+        rebal_dates = rebalance_dates(prices.index, self.rebalance)
         columns = candidates + ([self.cash_ticker] if has_cash_etf else [])
-        weights = pd.DataFrame(0.0, index=rebalance_dates, columns=columns)
+        weights = pd.DataFrame(0.0, index=rebal_dates, columns=columns)
         buffer_n = max(self.top_n, int(round(self.top_n * self.hold_buffer)))
         held: list[str] = []
 
-        for date in rebalance_dates:
+        for date in rebal_dates:
             z = zscore.loc[date]
             # Oversold (z < 0), short-term negative return, in a longer uptrend.
             eligible = z[(z < 0)

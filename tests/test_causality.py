@@ -43,3 +43,7 @@ def test_challenger_causal(synthetic_prices):
 
 def test_challenger_causal_with_breadth(synthetic_prices):
     _assert_causal(ChallengerStrategy(regime_use_breadth=True), synthetic_prices)
+
+
+def test_challenger_causal_weekly_mr(synthetic_prices):
+    _assert_causal(ChallengerStrategy(mr_rebalance="W"), synthetic_prices)

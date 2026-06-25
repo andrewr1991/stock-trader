@@ -17,4 +17,5 @@ reports/*
 !reports/challenger_beta_stability.png
 !reports/multiasset_prototype.md
 !reports/multiasset_prototype.png
+!reports/experiment_ledger.md
 *.egg-info/

@@ -138,6 +138,23 @@ benefit (see [challenger.py](src/trader/strategies/challenger.py)):
 
 The capability stays, the defaults don't change. Evidence over plausibility.
 
+## Experiment ledger
+
+Every idea we've tried is recorded in a queryable ledger — the lean, genuinely
+useful slice of a "research coordinator" (no multi-LLM orchestration: idea
+generation was never the bottleneck, validation was, and the walk-forward
+already does that). Browse [reports/experiment_ledger.md](reports/experiment_ledger.md) or:
+
+```powershell
+.venv\Scripts\python scripts\research_ledger.py list
+.venv\Scripts\python scripts\research_ledger.py search turnover   # what died on turnover?
+.venv\Scripts\python scripts\research_ledger.py add --idea "..." --decision deferred --by claude
+.venv\Scripts\python scripts\research_ledger.py export            # refresh the markdown
+```
+
+Decisions: `shipped` (default), `flag` (built, off by default — tested, didn't
+win), `rejected`, `prototype` (built, not live), `deferred` (not yet tested).
+
 ## Universe / survivorship
 
 `config.UNIVERSE` is today's survivors, so backtests are optimistic.

@@ -21,15 +21,12 @@ import pandas as pd
 
 from trader.bots import BotConfig, champion_bot
 from trader.config import (
-    BENCHMARK,
-    CASH_ETF,
     GROSS_EXPOSURE_CAP,
     INITIAL_CAPITAL,
     KILL_SWITCH_DRAWDOWN,
     MAX_ORDERS_PER_RUN,
     MAX_POSITION_WEIGHT,
     SUSPECT_EQUITY_FRACTION,
-    UNIVERSE,
 )
 from trader.data.loader import load_prices
 from trader.live.journal import Journal
@@ -47,9 +44,8 @@ def is_suspect_equity(equity: float, last: float | None,
 
 def compute_target_weights(bot: BotConfig) -> pd.Series:
     """Latest rebalance row from the bot's strategy, freshly downloaded data."""
-    tickers = sorted(set(UNIVERSE) | {BENCHMARK, CASH_ETF})
     start = (pd.Timestamp.today() - pd.DateOffset(years=3)).strftime("%Y-%m-%d")
-    prices = load_prices(tickers, start=start, refresh=True)
+    prices = load_prices(bot.data_tickers, start=start, refresh=True)
     weights = bot.strategy().generate_weights(prices).iloc[-1]
     return weights[weights > 0.0001]
 

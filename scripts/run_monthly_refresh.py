@@ -33,8 +33,8 @@ import pandas as pd
 from trader.backtest.engine import run_backtest
 from trader.backtest.metrics import sharpe
 from trader.backtest.walkforward import walk_forward
-from trader.bots import BotConfig, get_bot
-from trader.config import BENCHMARK, CASH_ETF, COST_BPS, INITIAL_CAPITAL, UNIVERSE
+from trader.bots import BOT_NAMES, BotConfig, get_bot
+from trader.config import COST_BPS, INITIAL_CAPITAL
 from trader.data.loader import load_prices
 from trader.live.journal import Journal
 
@@ -49,14 +49,13 @@ def trailing_sharpe(prices: pd.DataFrame, params_list: list[dict], bot: BotConfi
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bot", default="champion", choices=["champion", "challenger"])
+    parser.add_argument("--bot", default="champion", choices=BOT_NAMES)
     args = parser.parse_args()
 
     bot = get_bot(args.bot)
     journal = Journal(bot.journal_db)
-    tickers = sorted(set(UNIVERSE) | {BENCHMARK, CASH_ETF})
     print(f"[{bot.name}] Downloading fresh prices ...")
-    prices = load_prices(tickers, start="2000-01-01", refresh=True)
+    prices = load_prices(bot.data_tickers, start=bot.data_start, refresh=True)
 
     print(f"[{bot.name}] Running walk-forward to produce the candidate ...")
     wf = walk_forward(

@@ -8,6 +8,8 @@ reports/*
 !reports/performance.png
 !reports/performance_challenger.md
 !reports/performance_challenger.png
+!reports/performance_multiasset.md
+!reports/performance_multiasset.png
 !reports/champion_vs_challenger.csv
 !reports/champion_vs_challenger.html
 !reports/champion_vs_challenger.png

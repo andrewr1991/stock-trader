@@ -17,14 +17,14 @@ import argparse
 
 
 def main():
+    from trader.bots import BOT_NAMES, get_bot
+    from trader.live.runner import run_daily
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bot", default="champion", choices=["champion", "challenger"])
+    parser.add_argument("--bot", default="champion", choices=BOT_NAMES)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
-
-    from trader.bots import get_bot
-    from trader.live.runner import run_daily
 
     run_daily(get_bot(args.bot), dry_run=args.dry_run, force_rebalance=args.force)
 

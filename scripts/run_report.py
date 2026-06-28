@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from trader.backtest.metrics import max_drawdown, sharpe
-from trader.bots import get_bot
+from trader.bots import BOT_NAMES, get_bot
 from trader.config import BENCHMARK, REPORTS_DIR
 from trader.data.loader import load_prices
 from trader.live.journal import Journal
@@ -32,7 +32,7 @@ from trader.live.journal import Journal
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bot", default="champion", choices=["champion", "challenger"])
+    parser.add_argument("--bot", default="champion", choices=BOT_NAMES)
     args = parser.parse_args()
 
     bot = get_bot(args.bot)

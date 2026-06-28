@@ -1,8 +1,8 @@
 # Experiment ledger
 
-_25 experiments · shipped: 15  ·  flag: 5  ·  deferred: 4  ·  prototype: 1_
+_26 experiments · shipped: 16  ·  flag: 5  ·  deferred: 4  ·  prototype: 1_
 
-_By proposer: claude: 10  ·  chatgpt: 10  ·  chatgpt+claude: 5_
+_By proposer: claude: 10  ·  chatgpt: 10  ·  chatgpt+claude: 5  ·  user: 1_
 
 | Date | Idea | Area | By | Decision | Result | Reason |
 |---|---|---|---|---|---|---|
@@ -31,3 +31,4 @@ _By proposer: claude: 10  ·  chatgpt: 10  ·  chatgpt+claude: 5_
 | 2026-06-24 | Continuous/soft regime curve | regime | chatgpt+claude | deferred |  | judge on turnover/whipsaw not CAGR |
 | 2026-06-24 | Larger / point-in-time equity universe | data | claude | deferred |  | biggest honesty upgrade; needs delisted price data |
 | 2026-06-27 | Suspect-equity guard (bad-read protection) | risk | claude | shipped | fixed challenger phantom -99% drawdown; blocks glitch-triggered kill switch | a transient read must never liquidate a real book |
+| 2026-06-27 | Multi-asset trend bot (3rd live bot) | multi-asset | user | shipped | live on 3rd Alpaca paper account; opening book SPY/EFA/TLT/BIL | crisis-resilient diversifier, promoted from prototype |

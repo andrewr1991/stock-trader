@@ -39,6 +39,14 @@ CHALLENGER_ALPACA_SECRET = os.getenv("CHALLENGER_ALPACA_SECRET", "")
 CHALLENGER_JOURNAL_DB = PROJECT_ROOT / "data" / "journal_challenger.db"
 CHALLENGER_PARAMS_FILE = PROJECT_ROOT / "data" / "live_params_challenger.json"
 
+# --- MULTI-ASSET bot ---------------------------------------------------------
+# Third bot: the multi-asset trend sleeve (SPY/EFA/TLT/GLD + cash). A
+# crisis-resilient diversifier, not an equity beater. Own Alpaca account.
+MULTIASSET_ALPACA_KEY = os.getenv("MULTIASSET_ALPACA_KEY", "")
+MULTIASSET_ALPACA_SECRET = os.getenv("MULTIASSET_ALPACA_SECRET", "")
+MULTIASSET_JOURNAL_DB = PROJECT_ROOT / "data" / "journal_multiasset.db"
+MULTIASSET_PARAMS_FILE = PROJECT_ROOT / "data" / "live_params_multiasset.json"
+
 # Challenger strategy knobs (all overridable per-instance; these are the
 # central defaults). Kept deliberately few — every added free parameter is a
 # new chance to overfit (see brain-ablation-findings).

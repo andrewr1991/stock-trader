@@ -18,13 +18,20 @@ from trader.config import (
     ALPACA_API_KEY,
     ALPACA_PAPER,
     ALPACA_SECRET_KEY,
+    BENCHMARK,
+    CASH_ETF,
     CHALLENGER_ALPACA_KEY,
     CHALLENGER_ALPACA_SECRET,
     CHALLENGER_JOURNAL_DB,
     CHALLENGER_PARAMS_FILE,
     JOURNAL_DB,
     LIVE_PARAMS_FILE,
+    MULTIASSET_ALPACA_KEY,
+    MULTIASSET_ALPACA_SECRET,
+    MULTIASSET_JOURNAL_DB,
+    MULTIASSET_PARAMS_FILE,
     REPORTS_DIR,
+    UNIVERSE,
 )
 from trader.strategies.base import Strategy
 from trader.strategies.challenger import (
@@ -35,6 +42,10 @@ from trader.strategies.challenger import (
 )
 from trader.strategies.ensemble import EnsembleStrategy
 from trader.strategies.momentum import MomentumStrategy
+from trader.strategies.trend_multi_asset import DEFAULT_ASSETS, MultiAssetTrendStrategy
+
+EQUITY_TICKERS = sorted(set(UNIVERSE) | {BENCHMARK, CASH_ETF})
+ETF_TICKERS = sorted(set(DEFAULT_ASSETS) | {BENCHMARK, CASH_ETF})
 
 
 @dataclass
@@ -50,6 +61,8 @@ class BotConfig:
     factory: Callable[..., Strategy]                   # walk-forward: **combo -> Strategy
     param_grid: dict
     ensemble_k: int
+    data_tickers: list[str]   # which symbols this bot's strategy trades/needs
+    data_start: str           # earliest date to load for backtests/refits
     report_md: Path
     report_png: Path
 
@@ -82,6 +95,8 @@ def champion_bot() -> BotConfig:
         factory=MomentumStrategy,
         param_grid={"lookback_days": [126, 189, 252], "top_n": [5, 10, 15]},
         ensemble_k=3,
+        data_tickers=EQUITY_TICKERS,
+        data_start="2000-01-01",
         report_md=REPORTS_DIR / "performance.md",
         report_png=REPORTS_DIR / "performance.png",
     )
@@ -100,12 +115,40 @@ def challenger_bot() -> BotConfig:
         factory=ChallengerStrategy,
         param_grid=CHALLENGER_GRID,
         ensemble_k=2,
+        data_tickers=EQUITY_TICKERS,
+        data_start="2000-01-01",
         report_md=REPORTS_DIR / "performance_challenger.md",
         report_png=REPORTS_DIR / "performance_challenger.png",
     )
 
 
-_BOTS = {"champion": champion_bot, "challenger": challenger_bot}
+def _build_multiasset_ensemble(params_list: list[dict]) -> Strategy:
+    strategies = [MultiAssetTrendStrategy(**p) for p in params_list]
+    return EnsembleStrategy(strategies) if len(strategies) > 1 else strategies[0]
+
+
+def multiasset_bot() -> BotConfig:
+    return BotConfig(
+        name="multiasset",
+        api_key=MULTIASSET_ALPACA_KEY,
+        secret_key=MULTIASSET_ALPACA_SECRET,
+        paper=ALPACA_PAPER,
+        journal_db=MULTIASSET_JOURNAL_DB,
+        params_file=MULTIASSET_PARAMS_FILE,
+        default_params=[{"trend_ma_days": 200}],
+        build_strategy=_build_multiasset_ensemble,
+        factory=MultiAssetTrendStrategy,
+        param_grid={"trend_ma_days": [150, 200, 250]},
+        ensemble_k=2,
+        data_tickers=ETF_TICKERS,
+        data_start="2005-01-01",  # clean window where all four ETFs exist
+        report_md=REPORTS_DIR / "performance_multiasset.md",
+        report_png=REPORTS_DIR / "performance_multiasset.png",
+    )
+
+
+_BOTS = {"champion": champion_bot, "challenger": challenger_bot, "multiasset": multiasset_bot}
+BOT_NAMES = list(_BOTS)
 
 
 def get_bot(name: str) -> BotConfig:

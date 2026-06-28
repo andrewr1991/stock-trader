@@ -230,5 +230,5 @@ enough independent samples; real-time adaptation learns noise). Instead:
 - [x] Weekly mean-reversion cadence (built, ablation-tested, rejected — monthly kept)
 - [x] Beta-stability reporting (rolling/down-market/per-fold beta)
 - [x] Multi-asset trend sleeve prototype (design B — crisis-resilient diversifier)
-- [ ] Promote the multi-asset sleeve to a third live bot (if you want it)
+- [x] Promote the multi-asset sleeve to a third live bot (`--bot multiasset`)
 - [ ] Delisted-name price data (paid feed) to finish the survivorship fix

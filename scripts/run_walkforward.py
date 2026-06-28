@@ -27,15 +27,15 @@ import matplotlib.pyplot as plt
 from trader.backtest.engine import buy_and_hold
 from trader.backtest.metrics import format_summary, summary
 from trader.backtest.walkforward import walk_forward
-from trader.bots import get_bot
-from trader.config import BENCHMARK, CASH_ETF, COST_BPS, INITIAL_CAPITAL, REPORTS_DIR, UNIVERSE
+from trader.bots import BOT_NAMES, get_bot
+from trader.config import BENCHMARK, COST_BPS, INITIAL_CAPITAL, REPORTS_DIR
 from trader.data.loader import load_prices
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bot", default="champion", choices=["champion", "challenger"])
-    parser.add_argument("--start", default="2007-01-01")
+    parser.add_argument("--bot", default="champion", choices=BOT_NAMES)
+    parser.add_argument("--start", default=None, help="default: the bot's own data_start")
     parser.add_argument("--train-years", type=int, default=5)
     parser.add_argument("--test-years", type=int, default=1)
     parser.add_argument("--ensemble-k", type=int, default=None,
@@ -46,10 +46,11 @@ def main():
 
     bot = get_bot(args.bot)
     ensemble_k = args.ensemble_k if args.ensemble_k is not None else bot.ensemble_k
+    start = args.start or bot.data_start
 
-    tickers = sorted(set(UNIVERSE) | {BENCHMARK, CASH_ETF})
-    print(f"[{bot.name}] Loading prices for {len(tickers)} tickers from {args.start} ...")
-    prices = load_prices(tickers, start=args.start)
+    tickers = bot.data_tickers
+    print(f"[{bot.name}] Loading prices for {len(tickers)} tickers from {start} ...")
+    prices = load_prices(tickers, start=start)
 
     n_combos = 1
     for v in bot.param_grid.values():

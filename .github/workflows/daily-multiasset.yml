@@ -1,0 +1,47 @@
+# Daily paper-trading loop for the MULTI-ASSET trend bot (third bot).
+# Independent Alpaca account, journal, params, report. Shares the trading-loop
+# concurrency group so the bots never push to the repo at the same time.
+name: daily-trading-loop-multiasset
+
+on:
+  schedule:
+    # 19:40 UTC — after champion (19:30) and challenger (19:35).
+    - cron: "40 19 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency: trading-loop
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Run daily trading loop (multi-asset)
+        env:
+          MULTIASSET_ALPACA_KEY: ${{ secrets.MULTIASSET_ALPACA_KEY }}
+          MULTIASSET_ALPACA_SECRET: ${{ secrets.MULTIASSET_ALPACA_SECRET }}
+          ALPACA_PAPER: "true"
+        run: python scripts/run_daily.py --bot multiasset
+
+      - name: Generate multi-asset report
+        run: python scripts/run_report.py --bot multiasset
+
+      - name: Persist state + report back to the repo
+        run: |
+          git config user.name "trading-bot"
+          git config user.email "trading-bot@users.noreply.github.com"
+          git add -A reports data
+          git diff --cached --quiet || git commit -m "multiasset: $(date -u +%Y-%m-%d)"
+          git pull --rebase origin master
+          git push

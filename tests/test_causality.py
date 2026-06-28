@@ -6,7 +6,6 @@ This is the single most important property of the whole system — if it fails,
 every backtest is a lie. Tested on all three live strategies.
 """
 import numpy as np
-import pytest
 
 from trader.strategies.challenger import ChallengerStrategy
 from trader.strategies.mean_reversion import MeanReversionStrategy

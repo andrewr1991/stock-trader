@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 from trader.config import CASH_ETF
-from trader.strategies.base import Strategy, rebalance_dates
+from trader.strategies.base import Strategy, exante_vol, rebalance_dates
 
 TRADING_DAYS = 252
 DEFAULT_ASSETS = ("SPY", "EFA", "TLT", "GLD")  # US eq, intl eq, long bonds, gold
@@ -54,19 +54,6 @@ class MultiAssetTrendStrategy(Strategy):
             "vol_target": self.vol_target,
         }
 
-    def _exante_vol(self, daily_ret: pd.DataFrame, weights: pd.Series,
-                    asof: pd.Timestamp) -> float:
-        held = weights[weights > 0].index
-        window = daily_ret[held].loc[:asof].iloc[-self.vol_window:].dropna(axis=1)
-        held = window.columns
-        if len(held) == 0 or len(window) < 2:
-            return float("nan")
-        w = weights[held].to_numpy(dtype=float)
-        w = w / w.sum()
-        cov = window.cov().to_numpy() * TRADING_DAYS
-        var = float(w @ cov @ w)
-        return float(np.sqrt(var)) if var > 0 else float("nan")
-
     def generate_weights(self, prices: pd.DataFrame) -> pd.DataFrame:
         assets = [a for a in self.assets if a in prices.columns]
         px = prices[assets]
@@ -90,7 +77,7 @@ class MultiAssetTrendStrategy(Strategy):
 
             inv = 1.0 / asset_vol.loc[date, held].clip(lower=1e-4)
             w = inv / inv.sum()  # inverse-vol (risk parity) across held assets
-            vol = self._exante_vol(daily_ret, w, date)
+            vol = exante_vol(daily_ret, w, self.vol_window, date)
             scale = (min(self.max_exposure, self.vol_target / vol)
                      if vol and not np.isnan(vol) and vol > 0 else 0.0)
             weights.loc[date, held] = (w * scale).to_numpy()

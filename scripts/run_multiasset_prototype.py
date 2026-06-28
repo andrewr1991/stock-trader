@@ -119,7 +119,7 @@ def main():
           f"maxDD {stats['Max Drawdown']:.1%}, beta {beta:.2f} (down {down_beta:.2f})")
     print(f"OOS walk-forward: CAGR {oos['CAGR']:.1%}, Sharpe {oos['Sharpe']:.2f}, "
           f"maxDD {oos['Max Drawdown']:.1%}")
-    print(f"Crisis years (MA vs SPY): " +
+    print("Crisis years (MA vs SPY): " +
           ", ".join(f"{y} {pct(cr[y])}/{pct(cr_spy[y])}" for y in (2008, 2020, 2022)))
     print(f"Correlation to challenger: daily {corr_d:.2f}, monthly {corr_m:.2f}")
     print(f"Wrote {PNG_PATH} and {MD_PATH}")

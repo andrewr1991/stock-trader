@@ -41,13 +41,11 @@ from trader.config import (
     CHALLENGER_MR_WEIGHT,
     CHALLENGER_VOL_TARGET,
 )
-from trader.strategies.base import Strategy
+from trader.strategies.base import Strategy, exante_vol
 from trader.strategies.ensemble import EnsembleStrategy
 from trader.strategies.mean_reversion import MeanReversionStrategy
 from trader.strategies.momentum import MomentumStrategy
 from trader.strategies.regime import RegimeModel
-
-TRADING_DAYS = 252
 
 
 class ChallengerStrategy(Strategy):
@@ -119,24 +117,6 @@ class ChallengerStrategy(Strategy):
             "mr_rebalance": self.mean_reversion.rebalance,
         }
 
-    def _exante_vol(self, daily_ret: pd.DataFrame, weights: pd.Series,
-                    asof: pd.Timestamp) -> float:
-        """Annualized ex-ante volatility of a fully-invested risk book.
-
-        Uses the trailing covariance of the held names up to (and including)
-        the rebalance date — causal, no look-ahead.
-        """
-        held = weights[weights > 0].index
-        window = daily_ret[held].loc[:asof].iloc[-self.vol_window:].dropna(axis=1)
-        held = window.columns
-        if len(held) == 0 or len(window) < 2:
-            return float("nan")
-        w = weights[held].to_numpy(dtype=float)
-        w = w / w.sum()  # normalize to a fully-invested book
-        cov = window.cov().to_numpy() * TRADING_DAYS
-        var = float(w @ cov @ w)
-        return float(np.sqrt(var)) if var > 0 else float("nan")
-
     def generate_weights(self, prices: pd.DataFrame) -> pd.DataFrame:
         mom_w = self.momentum.generate_weights(prices)
         mr_w = self.mean_reversion.generate_weights(prices)
@@ -166,7 +146,7 @@ class ChallengerStrategy(Strategy):
                 continue
 
             risk_norm = risk / risk.sum()  # fully-invested risk book
-            vol = self._exante_vol(daily_ret, risk_norm, date)
+            vol = exante_vol(daily_ret, risk_norm, self.vol_window, date)
             vol_scale = (
                 min(self.max_exposure, self.vol_target / vol)
                 if vol and not np.isnan(vol) and vol > 0 else 0.0

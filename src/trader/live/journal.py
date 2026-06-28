@@ -67,6 +67,12 @@ class Journal:
         row = self.conn.execute("SELECT MAX(equity) FROM equity_log").fetchone()
         return row[0]
 
+    def last_equity(self) -> float | None:
+        row = self.conn.execute(
+            "SELECT equity FROM equity_log ORDER BY date DESC LIMIT 1"
+        ).fetchone()
+        return row[0] if row else None
+
     def log_targets(self, date: str, weights: dict[str, float],
                     notionals: dict[str, float]) -> None:
         self.conn.execute("DELETE FROM targets WHERE date = ?", (date,))

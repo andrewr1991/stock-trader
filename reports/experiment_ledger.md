@@ -1,8 +1,8 @@
 # Experiment ledger
 
-_24 experiments · shipped: 14  ·  flag: 5  ·  deferred: 4  ·  prototype: 1_
+_25 experiments · shipped: 15  ·  flag: 5  ·  deferred: 4  ·  prototype: 1_
 
-_By proposer: chatgpt: 10  ·  claude: 9  ·  chatgpt+claude: 5_
+_By proposer: claude: 10  ·  chatgpt: 10  ·  chatgpt+claude: 5_
 
 | Date | Idea | Area | By | Decision | Result | Reason |
 |---|---|---|---|---|---|---|
@@ -30,3 +30,4 @@ _By proposer: chatgpt: 10  ·  claude: 9  ·  chatgpt+claude: 5_
 | 2026-06-24 | Execution alpha (close/open, stagger, limits) | execution | chatgpt+claude | deferred |  | expected <0.2%/yr; do sensitivity study first |
 | 2026-06-24 | Continuous/soft regime curve | regime | chatgpt+claude | deferred |  | judge on turnover/whipsaw not CAGR |
 | 2026-06-24 | Larger / point-in-time equity universe | data | claude | deferred |  | biggest honesty upgrade; needs delisted price data |
+| 2026-06-27 | Suspect-equity guard (bad-read protection) | risk | claude | shipped | fixed challenger phantom -99% drawdown; blocks glitch-triggered kill switch | a transient read must never liquidate a real book |

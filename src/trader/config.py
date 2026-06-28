@@ -62,6 +62,11 @@ KILL_SWITCH_DRAWDOWN = 0.40
 GROSS_EXPOSURE_CAP = 0.98
 # - a run that wants to place more orders than this is assumed buggy and aborts
 MAX_ORDERS_PER_RUN = 60
+# - a single-run equity reading below this fraction of the prior mark is treated
+#   as a transient bad read (settlement lag / API glitch), not a real loss: the
+#   run is skipped so it can neither poison the journal nor trip the kill switch.
+#   No diversified large-cap book drops >50% in a day, so this only catches errors.
+SUSPECT_EQUITY_FRACTION = 0.5
 
 # Liquid US large caps used for backtesting and paper trading.
 # CAVEAT: this is today's list of survivors, so backtests over it carry

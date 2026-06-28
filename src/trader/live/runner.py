@@ -28,6 +28,7 @@ from trader.config import (
     KILL_SWITCH_DRAWDOWN,
     MAX_ORDERS_PER_RUN,
     MAX_POSITION_WEIGHT,
+    SUSPECT_EQUITY_FRACTION,
     UNIVERSE,
 )
 from trader.data.loader import load_prices
@@ -35,6 +36,13 @@ from trader.live.journal import Journal
 from trader.risk.manager import RiskManager
 
 MIN_TRADE_NOTIONAL = 25.0  # ignore dust-sized rebalance deltas
+
+
+def is_suspect_equity(equity: float, last: float | None,
+                      fraction: float = SUSPECT_EQUITY_FRACTION) -> bool:
+    """True if `equity` is implausibly far below the previous mark — a likely
+    transient bad read (settlement lag / API glitch) rather than a real loss."""
+    return last is not None and last > 0 and equity < fraction * last
 
 
 def compute_target_weights(bot: BotConfig) -> pd.Series:
@@ -83,6 +91,15 @@ def run_daily(bot: BotConfig | None = None, dry_run: bool = False,
     if broker is not None:
         equity = broker.equity()
         positions = broker.positions()
+        # Guard: a transient bad equity read (settlement lag, API glitch) must
+        # neither poison the journal nor trip the kill switch into liquidating a
+        # real book. Skip the run; the next read confirms the true state.
+        if is_suspect_equity(equity, journal.last_equity()):
+            journal.log_event("SUSPECT_EQUITY",
+                              f"read ${equity:,.2f} vs last ${journal.last_equity():,.2f}; skipped")
+            print(f"{tag} SUSPECT equity ${equity:,.2f} vs last "
+                  f"${journal.last_equity():,.2f} — skipping run, no action taken.")
+            return
     else:
         equity = INITIAL_CAPITAL
         positions = {}

@@ -1,0 +1,65 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading bots dashboard</title>
+<style>
+ body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;max-width:1000px;margin:0 auto;padding:1.5rem 1rem;color:#1a1a1a;background:#fafafa}
+ h1{font-weight:600;margin:0 0 .25rem} .upd{color:#777;font-size:.85rem;margin-bottom:1.5rem}
+ .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-bottom:1.5rem}
+ .card{background:#fff;border:1px solid #e7e7e7;border-radius:12px;padding:1rem 1.1rem;position:relative}
+ .dot{width:10px;height:10px;border-radius:50%;position:absolute;top:1.2rem;right:1.1rem}
+ .card h2{font-size:.95rem;font-weight:600;margin:0 0 .5rem;color:#444}
+ .big{font-size:1.7rem;font-weight:600} .sub{color:#777;font-size:.8rem;margin-bottom:.6rem}
+ .row{display:flex;justify-content:space-between;font-size:.85rem;padding:.15rem 0;color:#555}
+ .alloc{width:100%;border-collapse:collapse;margin-top:.6rem;font-size:.8rem}
+ .alloc th{text-align:left;color:#999;font-weight:500;border-bottom:1px solid #eee;padding-bottom:.2rem}
+ .alloc td{padding:.12rem 0;color:#444}
+ .chartwrap{background:#fff;border:1px solid #e7e7e7;border-radius:12px;padding:1rem;height:420px}
+ .note{color:#888;font-size:.8rem;margin-top:1rem;line-height:1.5}
+ a{color:#378ADD}
+</style></head><body>
+<h1>Trading bots — live paper dashboard</h1>
+<div class="upd">Auto-updated 2026-06-29 03:32 UTC · paper trading on Alpaca</div>
+<div class="cards">
+        <div class="card">
+          <div class="dot" style="background:#378ADD"></div>
+          <h2>Champion (momentum)</h2>
+          <div class="big">$101,108</div>
+          <div class="sub">+0.98% since 2026-06-10 · 16d live</div>
+          <div class="row"><span>vs SPY</span><b style="color:#1a8a4a">+0.23%</b></div>
+          <div class="row"><span>max drawdown</span><b>-4.16%</b></div>
+          <div class="row"><span>last rebalance</span><b>2026-06-10</b></div>
+          <table class="alloc"><thead><tr><th>current allocation</th><th></th></tr></thead><tbody><tr><td>AMD</td><td style='text-align:right'>8%</td></tr><tr><td>CAT</td><td style='text-align:right'>8%</td></tr><tr><td>COP</td><td style='text-align:right'>8%</td></tr><tr><td>CVX</td><td style='text-align:right'>8%</td></tr><tr><td>FDX</td><td style='text-align:right'>8%</td></tr><tr><td>INTC</td><td style='text-align:right'>8%</td></tr><tr><td>MU</td><td style='text-align:right'>8%</td></tr><tr><td>SLB</td><td style='text-align:right'>8%</td></tr><tr><td>XOM</td><td style='text-align:right'>8%</td></tr><tr><td>TXN</td><td style='text-align:right'>5%</td></tr><tr><td>C</td><td style='text-align:right'>2%</td></tr><tr><td>DE</td><td style='text-align:right'>2%</td></tr></tbody></table>
+        </div>
+        <div class="card">
+          <div class="dot" style="background:#7F77DD"></div>
+          <h2>Challenger (multi-sleeve)</h2>
+          <div class="big">$101,111</div>
+          <div class="sub">+1.11% since 2026-06-23 · 3d live</div>
+          <div class="row"><span>vs SPY</span><b style="color:#1a8a4a">+0.36%</b></div>
+          <div class="row"><span>max drawdown</span><b>-0.00%</b></div>
+          <div class="row"><span>last rebalance</span><b>2026-06-23</b></div>
+          <table class="alloc"><thead><tr><th>current allocation</th><th></th></tr></thead><tbody><tr><td>BIL</td><td style='text-align:right'>25%</td></tr><tr><td>MU</td><td style='text-align:right'>4%</td></tr><tr><td>AMD</td><td style='text-align:right'>3%</td></tr><tr><td>CAT</td><td style='text-align:right'>3%</td></tr><tr><td>COP</td><td style='text-align:right'>3%</td></tr><tr><td>CVX</td><td style='text-align:right'>3%</td></tr><tr><td>FDX</td><td style='text-align:right'>3%</td></tr><tr><td>INTC</td><td style='text-align:right'>3%</td></tr><tr><td>SLB</td><td style='text-align:right'>3%</td></tr><tr><td>TXN</td><td style='text-align:right'>3%</td></tr><tr><td>XOM</td><td style='text-align:right'>3%</td></tr><tr><td>AAPL</td><td style='text-align:right'>2%</td></tr></tbody></table>
+        </div>
+        <div class="card">
+          <div class="dot" style="background:#1D9E75"></div>
+          <h2>Multi-asset (trend)</h2>
+          <div class="big">$100,000</div>
+          <div class="sub">+0.00% since 2026-06-27 · 1d live</div>
+          <div class="row"><span>vs SPY</span><b style="color:#c0392b">-0.75%</b></div>
+          <div class="row"><span>max drawdown</span><b>0.00%</b></div>
+          <div class="row"><span>last rebalance</span><b>2026-06-27</b></div>
+          <table class="alloc"><thead><tr><th>current allocation</th><th></th></tr></thead><tbody><tr><td>SPY</td><td style='text-align:right'>25%</td></tr><tr><td>TLT</td><td style='text-align:right'>25%</td></tr><tr><td>EFA</td><td style='text-align:right'>20%</td></tr><tr><td>BIL</td><td style='text-align:right'>6%</td></tr></tbody></table>
+        </div></div>
+<div class="chartwrap"><canvas id="c"></canvas></div>
+<p class="note">Growth of 100 since each bot's inception (paper money). Early days —
+judge on months, not weeks. Bots fall less in crashes rather than rise faster in rallies;
+the edge to watch is risk-adjusted, not raw return. SPY shown as the benchmark.</p>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+new Chart(document.getElementById('c'),{type:'line',
+ data:{labels:["2026-06-10", "2026-06-11", "2026-06-12", "2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19", "2026-06-22", "2026-06-23", "2026-06-24", "2026-06-25", "2026-06-26", "2026-06-27", "2026-06-28"],datasets:[{label:'Champion (momentum)',data:[100.0, 101.3, 102.89, 103.71, 101.98, 101.67, 103.39, 103.23, 105.37, null, 103.2, 104.06, 100.98, null, null],borderColor:'#378ADD',backgroundColor:'#378ADD',borderWidth:2,pointRadius:0,spanGaps:true,tension:0.1},{label:'Challenger (multi-sleeve)',data:[null, null, null, null, null, null, null, null, null, 100.0, null, 101.11, 101.11, null, null],borderColor:'#7F77DD',backgroundColor:'#7F77DD',borderWidth:2,pointRadius:0,spanGaps:true,tension:0.1},{label:'Multi-asset (trend)',data:[null, null, null, null, null, null, null, null, null, null, null, null, null, 100.0, 100.0],borderColor:'#1D9E75',backgroundColor:'#1D9E75',borderWidth:2,pointRadius:0,spanGaps:true,tension:0.1},{label:'SPY',data:[100.0, 101.7, 102.25, 104.05, 103.43, 102.14, 103.2, null, 102.88, 101.38, 101.34, 101.48, 100.75, null, null],borderColor:'#D85A30',backgroundColor:'#D85A30',borderWidth:2,borderDash:[6,4],pointRadius:0,spanGaps:true,tension:0.1}]},
+ options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:{position:'top',labels:{boxWidth:12,usePointStyle:true}}},
+  scales:{y:{title:{display:true,text:'Growth of 100'}},
+   x:{ticks:{maxTicksLimit:12,maxRotation:0}}}}});
+</script></body></html>

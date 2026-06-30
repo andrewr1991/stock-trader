@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strategy Lab</title>
+<style>
+ body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;max-width:980px;margin:0 auto;padding:1.5rem 1rem;color:#1a1a1a;background:#fafafa}
+ h1{font-weight:600;margin:0 0 .2rem} .sub{color:#777;font-size:.85rem;margin-bottom:1.2rem}
+ a{color:#378ADD}
+ .panel{background:#fff;border:1px solid #e7e7e7;border-radius:12px;padding:1.1rem 1.2rem;margin-bottom:1rem}
+ label{display:block;font-size:.82rem;color:#555;margin:.7rem 0 .2rem}
+ select,input[type=range]{width:100%} select{padding:.4rem;border:1px solid #ccc;border-radius:8px;background:#fff}
+ .ctl{display:flex;align-items:center;gap:.7rem} .ctl output{font-weight:600;min-width:46px;text-align:right;font-variant-numeric:tabular-nums}
+ .params{display:grid;grid-template-columns:1fr 1fr;gap:.3rem 1.4rem} @media(max-width:640px){.params{grid-template-columns:1fr}}
+ button{background:#378ADD;color:#fff;border:0;border-radius:8px;padding:.55rem 1.1rem;font-size:.9rem;cursor:pointer;margin:1rem .5rem 0 0}
+ button.alt{background:#fff;color:#1a8a4a;border:1px solid #1a8a4a} button:disabled{opacity:.5;cursor:wait}
+ .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.6rem;margin-top:.4rem}
+ .mc{background:#f4f4f6;border-radius:10px;padding:.6rem .7rem} .mc .k{font-size:.72rem;color:#777} .mc .v{font-size:1.25rem;font-weight:600}
+ .chartwrap{height:320px;position:relative;margin-top:.8rem}
+ #status{font-size:.85rem;color:#555;padding:.5rem 0}
+ .wf{background:#fff7e6;border:1px solid #ffe2a8;border-radius:10px;padding:.8rem 1rem;margin-top:.8rem;font-size:.88rem}
+ .note{color:#888;font-size:.8rem;line-height:1.6;margin-top:1rem}
+ .spin{display:inline-block;width:13px;height:13px;border:2px solid #cbd;border-top-color:#378ADD;border-radius:50%;animation:s .8s linear infinite;vertical-align:-2px;margin-right:6px}
+ @keyframes s{to{transform:rotate(360deg)}}
+</style></head><body>
+<h1>Strategy Lab</h1>
+<div class="sub">Tune a trading strategy and run a real backtest + walk-forward test — entirely in your browser.
+ <a href="../">← back to the live dashboard</a></div>
+
+<div class="panel">
+ <div id="status"><span class="spin"></span>Loading the Python engine (one-time, ~15s)…</div>
+ <div id="controls" style="display:none">
+  <label>Strategy family</label>
+  <select id="family">
+   <option value="momentum">Momentum — buy recent winners</option>
+   <option value="mean_reversion">Mean reversion — buy oversold names</option>
+   <option value="multi_asset">Multi-asset trend — rotate across SPY/EFA/TLT/GLD</option>
+  </select>
+  <div class="params" id="params"></div>
+  <button id="run">Run backtest</button>
+  <button id="runwf" class="alt">Run walk-forward (honest test)</button>
+ </div>
+</div>
+
+<div class="panel" id="results" style="display:none">
+ <div class="cards" id="cards"></div>
+ <div class="wf" id="wfbox" style="display:none"></div>
+ <div class="chartwrap"><canvas id="chart"></canvas></div>
+ <div class="note">Backtest over 2005–2026, after 10 bps costs, on a fixed large-cap + ETF universe.
+  The <b>walk-forward</b> number re-picks parameters each year using only past data — it's the honest
+  estimate, and it's almost always humbler than the backtest. Survivor-biased universe → read these
+  <i>relative</i>, not as a forecast. Educational tool, not investment advice.</div>
+</div>
+
+<script id="pyglue" type="text/python">
+import json, os, sys, io
+import pandas as pd
+files = json.loads(BUNDLEJSON)["files"]
+for path, content in files.items():
+    full = "/lab/" + path
+    os.makedirs(os.path.dirname(full), exist_ok=True)
+    with open(full, "w") as fh:
+        fh.write(content)
+sys.path.insert(0, "/lab")
+
+from trader.backtest.engine import buy_and_hold, run_backtest
+from trader.backtest.metrics import (annual_turnover, annual_vol, cagr,
+                                     max_drawdown, sharpe, sortino, summary)
+from trader.backtest.walkforward import walk_forward
+from trader.strategies.momentum import MomentumStrategy
+from trader.strategies.mean_reversion import MeanReversionStrategy
+from trader.strategies.trend_multi_asset import MultiAssetTrendStrategy
+from trader.config import BENCHMARK, COST_BPS, INITIAL_CAPITAL
+
+PRICES = pd.read_csv(io.StringIO(CSV), index_col=0, parse_dates=True)
+FAMILIES = {
+    "momentum": (MomentumStrategy, {"lookback_days": [126, 189, 252], "top_n": [5, 10, 15]}),
+    "mean_reversion": (MeanReversionStrategy, {"lookback_days": [5, 10, 21], "top_n": [5, 10, 15]}),
+    "multi_asset": (MultiAssetTrendStrategy, {"trend_ma_days": [150, 200, 250]}),
+}
+
+def _curve(eq, idx):
+    e = eq.reindex(idx)
+    base = e.dropna().iloc[0]
+    return [None if v != v else round(float(v / base * 100), 2) for v in e.values]
+
+def run(family, params_json):
+    params = json.loads(params_json)
+    cls, _ = FAMILIES[family]
+    px = PRICES
+    res = run_backtest(px, cls(**params).generate_weights(px),
+                       cost_bps=COST_BPS, initial_capital=INITIAL_CAPITAL)
+    spy = buy_and_hold(px[BENCHMARK].loc[res.equity.index[0]:], initial_capital=INITIAL_CAPITAL).equity
+    r = res.equity.pct_change().fillna(0)
+    s = summary(res.equity, spy)
+    idx = res.equity.dropna().index[::10]
+    return json.dumps({
+        "metrics": {
+            "CAGR": round(s["CAGR"] * 100, 1), "Excess": round(s["Excess CAGR"] * 100, 1),
+            "Sharpe": round(sharpe(r), 2), "Sortino": round(sortino(r), 2),
+            "Vol": round(annual_vol(r) * 100, 1), "MaxDD": round(max_drawdown(res.equity) * 100, 1),
+            "Turnover": round(annual_turnover(res.turnover) * 100, 0),
+        },
+        "dates": [d.strftime("%Y-%m") for d in idx],
+        "strat": _curve(res.equity, idx), "spy": _curve(spy, idx),
+    })
+
+def run_wf(family, params_json):
+    fixed = json.loads(params_json)
+    cls, grid = FAMILIES[family]
+    g = {k: v for k, v in grid.items() if k not in fixed} or grid
+    def factory(**combo):
+        return cls(**{**fixed, **combo})
+    wf = walk_forward(PRICES, factory, g, train_years=5, test_years=1,
+                      cost_bps=COST_BPS, initial_capital=INITIAL_CAPITAL, ensemble_k=2)
+    spy = buy_and_hold(PRICES[BENCHMARK].loc[wf.equity.index[0]:], initial_capital=INITIAL_CAPITAL).equity
+    s = summary(wf.equity, spy)
+    return json.dumps({"CAGR": round(s["CAGR"] * 100, 1), "Excess": round(s["Excess CAGR"] * 100, 1),
+                       "Sharpe": round(s["Sharpe"], 2), "MaxDD": round(max_drawdown(wf.equity) * 100, 1)})
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+<script>
+const SPEC = {
+  momentum: [
+    {k:'lookback_days', label:'Lookback (days)', min:42, max:300, step:21, def:126},
+    {k:'top_n', label:'Number of stocks held', min:3, max:20, step:1, def:10},
+    {k:'use_trend_filter', label:'Market trend filter (cash in downtrends)', type:'bool', def:true},
+  ],
+  mean_reversion: [
+    {k:'lookback_days', label:'Reversal window (days)', min:3, max:30, step:1, def:10},
+    {k:'z_window', label:'Z-score window (days)', min:10, max:40, step:2, def:20},
+    {k:'top_n', label:'Number of stocks held', min:3, max:20, step:1, def:10},
+  ],
+  multi_asset: [
+    {k:'trend_ma_days', label:'Trend window (days)', min:100, max:300, step:25, def:200},
+    {k:'vol_target', label:'Volatility target', min:0.06, max:0.20, step:0.01, def:0.10, pct:true},
+  ],
+};
+let pyodide, runFn, runWfFn, chart;
+const $ = id => document.getElementById(id);
+
+function renderParams() {
+  const fam = $('family').value;
+  $('params').innerHTML = SPEC[fam].map(p => {
+    if (p.type === 'bool')
+      return `<div><label>${p.label}</label><input type="checkbox" id="p_${p.k}" ${p.def?'checked':''}></div>`;
+    const show = p.pct ? Math.round(p.def*100)+'%' : p.def;
+    return `<div><label>${p.label}</label><div class="ctl">
+      <input type="range" id="p_${p.k}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.def}"
+       oninput="document.getElementById('o_${p.k}').value='${p.pct?'%':''}'?this.value:this.value">
+      <output id="o_${p.k}">${show}</output></div></div>`;
+  }).join('');
+  SPEC[fam].forEach(p => {
+    if (p.type==='bool') return;
+    const el = $('p_'+p.k), out = $('o_'+p.k);
+    el.oninput = () => out.value = p.pct ? Math.round(el.value*100)+'%' : el.value;
+  });
+}
+function getParams() {
+  const fam = $('family').value, out = {};
+  SPEC[fam].forEach(p => {
+    const el = $('p_'+p.k);
+    out[p.k] = p.type==='bool' ? el.checked : (p.step<1 ? parseFloat(el.value) : parseInt(el.value));
+  });
+  return out;
+}
+function card(k, v, suffix='') { return `<div class="mc"><div class="k">${k}</div><div class="v">${v}${suffix}</div></div>`; }
+
+function showResult(o) {
+  const m = o.metrics;
+  $('cards').innerHTML =
+    card('CAGR', m.CAGR, '%') + card('vs SPY', (m.Excess>=0?'+':'')+m.Excess, '%') +
+    card('Sharpe', m.Sharpe) + card('Sortino', m.Sortino) +
+    card('Volatility', m.Vol, '%') + card('Max drawdown', m.MaxDD, '%') +
+    card('Turnover/yr', m.Turnover, '%');
+  $('results').style.display = 'block'; $('wfbox').style.display='none';
+  if (chart) chart.destroy();
+  chart = new Chart($('chart'), {type:'line', data:{labels:o.dates, datasets:[
+    {label:'Your strategy', data:o.strat, borderColor:'#378ADD', borderWidth:2, pointRadius:0, tension:.1},
+    {label:'SPY', data:o.spy, borderColor:'#D85A30', borderWidth:2, borderDash:[6,4], pointRadius:0, tension:.1},
+  ]}, options:{responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'top'}}, scales:{y:{type:'logarithmic', title:{display:true,text:'Growth of 100'}},
+    x:{ticks:{maxTicksLimit:10,maxRotation:0}}}}});
+}
+
+async function init() {
+  pyodide = await loadPyodide();
+  $('status').innerHTML = '<span class="spin"></span>Loading data libraries…';
+  await pyodide.loadPackage(['numpy','pandas']);
+  $('status').innerHTML = '<span class="spin"></span>Loading the strategy engine + price data…';
+  const [bundle, csv] = await Promise.all([
+    fetch('bundle.json').then(r=>r.text()), fetch('prices.csv').then(r=>r.text())]);
+  pyodide.globals.set('BUNDLEJSON', bundle);
+  pyodide.globals.set('CSV', csv);
+  pyodide.runPython($('pyglue').textContent);
+  runFn = pyodide.globals.get('run');
+  runWfFn = pyodide.globals.get('run_wf');
+  $('status').style.display = 'none';
+  $('controls').style.display = 'block';
+  renderParams();
+}
+$('family').onchange = renderParams;
+$('run').onclick = () => {
+  $('run').disabled = $('runwf').disabled = true; $('run').textContent='Running…';
+  setTimeout(() => { try {
+    showResult(JSON.parse(runFn($('family').value, JSON.stringify(getParams()))));
+  } catch(e){ alert('Error: '+e); } finally {
+    $('run').disabled=$('runwf').disabled=false; $('run').textContent='Run backtest'; } }, 30);
+};
+$('runwf').onclick = () => {
+  $('run').disabled = $('runwf').disabled = true; $('runwf').textContent='Running (slower)…';
+  setTimeout(() => { try {
+    const w = JSON.parse(runWfFn($('family').value, JSON.stringify(getParams())));
+    $('wfbox').style.display='block';
+    $('wfbox').innerHTML = `<b>Walk-forward (out-of-sample):</b> CAGR <b>${w.CAGR}%</b>,
+      vs SPY ${w.Excess>=0?'+':''}${w.Excess}%, Sharpe ${w.Sharpe}, max drawdown ${w.MaxDD}%.
+      <br><span style="color:#a87b00">This re-picks parameters yearly on past data only — the honest number. Compare it to the backtest above.</span>`;
+  } catch(e){ alert('Error: '+e); } finally {
+    $('run').disabled=$('runwf').disabled=false; $('runwf').textContent='Run walk-forward (honest test)'; } }, 30);
+};
+init();
+</script></body></html>

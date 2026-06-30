@@ -251,6 +251,7 @@ def _render(p: dict) -> str:
  .chart{{height:300px;position:relative}} .note{{color:#888;font-size:.78rem;margin-top:.6rem;line-height:1.5}}
 </style></head><body>
 <h1>Trading bots — live dashboard</h1><div class="upd">Auto-updated {p['updated']} · paper trading on Alpaca</div>
+<div style="margin:.4rem 0 1rem"><a href="lab/" style="display:inline-block;background:#378ADD;color:#fff;text-decoration:none;padding:.5rem .9rem;border-radius:8px;font-size:.88rem">Try the Strategy Lab → build &amp; test your own strategy</a></div>
 
 <h2>Live paper trading</h2><div class="lbl">Real paper-money results since each bot went live.</div>
 <div class="cards">{cards}</div>

@@ -75,6 +75,14 @@ MAX_ORDERS_PER_RUN = 60
 #   run is skipped so it can neither poison the journal nor trip the kill switch.
 #   No diversified large-cap book drops >50% in a day, so this only catches errors.
 SUSPECT_EQUITY_FRACTION = 0.5
+# - readings ABOVE this multiple of the prior mark are equally suspect. A phantom
+#   HIGH read is the nastier failure: once journaled it becomes the all-time peak
+#   the kill switch measures drawdown against, so every later run reads as a
+#   -40%+ drawdown -> liquidation and a permanently bricked bot. A long-only,
+#   no-margin book cannot truly double in a day, so this too only catches errors.
+#   (If you ever intentionally resize an account by more than 2x, clear or adjust
+#   the journal first.)
+SUSPECT_EQUITY_MULTIPLE = 2.0
 
 # Liquid US large caps used for backtesting and paper trading.
 # CAVEAT: this is today's list of survivors, so backtests over it carry

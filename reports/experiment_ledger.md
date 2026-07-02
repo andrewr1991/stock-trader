@@ -1,8 +1,8 @@
 # Experiment ledger
 
-_26 experiments · shipped: 16  ·  flag: 5  ·  deferred: 4  ·  prototype: 1_
+_28 experiments · shipped: 18  ·  flag: 5  ·  deferred: 4  ·  prototype: 1_
 
-_By proposer: claude: 10  ·  chatgpt: 10  ·  chatgpt+claude: 5  ·  user: 1_
+_By proposer: claude: 12  ·  chatgpt: 10  ·  chatgpt+claude: 5  ·  user: 1_
 
 | Date | Idea | Area | By | Decision | Result | Reason |
 |---|---|---|---|---|---|---|
@@ -32,3 +32,5 @@ _By proposer: claude: 10  ·  chatgpt: 10  ·  chatgpt+claude: 5  ·  user: 1_
 | 2026-06-24 | Larger / point-in-time equity universe | data | claude | deferred |  | biggest honesty upgrade; needs delisted price data |
 | 2026-06-27 | Suspect-equity guard (bad-read protection) | risk | claude | shipped | fixed challenger phantom -99% drawdown; blocks glitch-triggered kill switch | a transient read must never liquidate a real book |
 | 2026-06-27 | Multi-asset trend bot (3rd live bot) | multi-asset | user | shipped | live on 3rd Alpaca paper account; opening book SPY/EFA/TLT/BIL | crisis-resilient diversifier, promoted from prototype |
+| 2026-07-01 | Symmetric suspect-equity guard (phantom high reads) | risk | claude | shipped | high read would poison all-time peak, trip kill switch every later run, brick the bot; guard now flags >2x jumps too | mirror of the real 6/24 low-read incident; journals audited clean |
+| 2026-07-01 | Pin dependency versions exactly | infra | claude | shipped | daily workflows no longer float pandas/numpy/etc; upgrades now deliberate via CI | an upstream release could hit all 3 bots simultaneously with zero code change |

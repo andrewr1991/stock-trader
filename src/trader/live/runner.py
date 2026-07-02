@@ -27,6 +27,7 @@ from trader.config import (
     MAX_ORDERS_PER_RUN,
     MAX_POSITION_WEIGHT,
     SUSPECT_EQUITY_FRACTION,
+    SUSPECT_EQUITY_MULTIPLE,
 )
 from trader.data.loader import load_prices
 from trader.live.journal import Journal
@@ -36,10 +37,21 @@ MIN_TRADE_NOTIONAL = 25.0  # ignore dust-sized rebalance deltas
 
 
 def is_suspect_equity(equity: float, last: float | None,
-                      fraction: float = SUSPECT_EQUITY_FRACTION) -> bool:
-    """True if `equity` is implausibly far below the previous mark — a likely
-    transient bad read (settlement lag / API glitch) rather than a real loss."""
-    return last is not None and last > 0 and equity < fraction * last
+                      low_fraction: float = SUSPECT_EQUITY_FRACTION,
+                      high_multiple: float = SUSPECT_EQUITY_MULTIPLE) -> bool:
+    """True if `equity` is implausibly far from the previous mark in EITHER
+    direction — a transient bad read (settlement lag / API glitch), not a
+    real move.
+
+    Both directions matter: a phantom LOW read could trip the kill switch
+    directly, and a phantom HIGH read would poison the journal's all-time
+    peak, tripping the kill switch on every later run (bricking the bot).
+    A diversified long-only book without margin can't halve or double in a
+    day, so these bounds only ever catch errors.
+    """
+    if last is None or last <= 0:
+        return False
+    return equity < low_fraction * last or equity > high_multiple * last
 
 
 def compute_target_weights(bot: BotConfig) -> pd.Series:
@@ -87,9 +99,10 @@ def run_daily(bot: BotConfig | None = None, dry_run: bool = False,
     if broker is not None:
         equity = broker.equity()
         positions = broker.positions()
-        # Guard: a transient bad equity read (settlement lag, API glitch) must
-        # neither poison the journal nor trip the kill switch into liquidating a
-        # real book. Skip the run; the next read confirms the true state.
+        # Guard: a transient bad equity read (settlement lag, API glitch) in
+        # either direction must never reach the journal. Low reads could trip
+        # the kill switch directly; high reads would poison the all-time peak
+        # and trip it on every later run. Skip; the next read confirms truth.
         if is_suspect_equity(equity, journal.last_equity()):
             journal.log_event("SUSPECT_EQUITY",
                               f"read ${equity:,.2f} vs last ${journal.last_equity():,.2f}; skipped")

@@ -1,8 +1,12 @@
-alpaca-py>=0.21
-pandas>=2.0
-numpy>=1.26
-yfinance>=0.2.40
-python-dotenv>=1.0
-matplotlib>=3.8
-pyarrow>=15.0
-pytest>=8.0
+# Pinned exactly: the daily bot workflows pip-install fresh on every run, so
+# floating versions would let an upstream release change all three live bots'
+# behavior overnight with no code change on our side. Upgrades are deliberate:
+# bump a pin locally, run the test suite, push (CI re-verifies), then it ships.
+alpaca-py==0.43.4
+pandas==3.0.3
+numpy==2.4.6
+yfinance==1.4.1
+python-dotenv==1.2.2
+matplotlib==3.10.9
+pyarrow==24.0.0
+pytest==9.1.1

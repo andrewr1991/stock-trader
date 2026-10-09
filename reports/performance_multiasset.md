@@ -1,13 +1,13 @@
 # Multiasset bot vs SPY (paper account)
 
-_Last updated: 2026-10-08 23:54 UTC · live for 103 days · equity $99,281_
+_Last updated: 2026-10-09 23:26 UTC · live for 104 days · equity $99,591_
 
 | Metric | multiasset | SPY |
 |---|---|---|
-| Total return | -0.72% | +6.88% |
-| Excess vs SPY | -7.60% | — |
+| Total return | -0.41% | +6.43% |
+| Excess vs SPY | -6.84% | — |
 | Max drawdown | -2.12% | — |
-| Sharpe (since inception) | -0.37 | — |
+| Sharpe (since inception) | -0.20 | — |
 
 ![multiasset vs SPY](performance_multiasset.png)
 

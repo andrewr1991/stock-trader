@@ -1,13 +1,13 @@
 # Champion bot vs SPY (paper account)
 
-_Last updated: 2026-11-03 01:43 UTC · live for 146 days · equity $95,601_
+_Last updated: 2026-11-04 00:04 UTC · live for 147 days · equity $95,938_
 
 | Metric | champion | SPY |
 |---|---|---|
-| Total return | -4.52% | +4.70% |
-| Excess vs SPY | -9.22% | — |
+| Total return | -4.18% | +4.51% |
+| Excess vs SPY | -8.69% | — |
 | Max drawdown | -9.86% | — |
-| Sharpe (since inception) | -0.45 | — |
+| Sharpe (since inception) | -0.41 | — |
 
 ![champion vs SPY](performance.png)
 

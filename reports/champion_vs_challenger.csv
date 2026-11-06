@@ -2,8 +2,8 @@ Metric,Champion (momentum),Challenger (multi-sleeve),SPY buy & hold
 CAGR,0.154165,0.106825,0.081018
 Annual return,0.156549,0.107892,0.096430
 Sharpe,0.967091,0.956220,0.501178
-Sortino,1.128970,1.113581,0.637281
+Sortino,1.128969,1.113579,0.637280
 Volatility,0.161876,0.112832,0.192406
-Max drawdown,-0.280500,-0.190557,-0.551894
+Max drawdown,-0.280500,-0.190558,-0.551894
 Win rate (monthly),0.565217,0.552795,0.630435
 Annual turnover,5.235836,6.309825,nan

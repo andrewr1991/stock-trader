@@ -1,13 +1,13 @@
 # Challenger bot vs SPY (paper account)
 
-_Last updated: 2026-11-17 02:35 UTC · live for 147 days · equity $96,875_
+_Last updated: 2026-11-18 01:50 UTC · live for 148 days · equity $95,753_
 
 | Metric | challenger | SPY |
 |---|---|---|
-| Total return | -3.12% | +1.12% |
-| Excess vs SPY | -4.24% | — |
+| Total return | -4.25% | +1.12% |
+| Excess vs SPY | -5.37% | — |
 | Max drawdown | -7.88% | — |
-| Sharpe (since inception) | -0.46 | — |
+| Sharpe (since inception) | -0.65 | — |
 
 ![challenger vs SPY](performance_challenger.png)
 
